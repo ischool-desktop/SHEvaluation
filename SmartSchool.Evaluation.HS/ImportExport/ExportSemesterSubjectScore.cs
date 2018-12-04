@@ -66,6 +66,7 @@ namespace SmartSchool.Evaluation.ImportExport
                 , "科排名母數"
                 , "校排名"
                 , "校排名母數"
+                , "類別"
                 , "類排名"
                 , "類排名母數"
                 );
@@ -238,6 +239,7 @@ namespace SmartSchool.Evaluation.ImportExport
                                     case "科排名母數": row.Add(field, GetRank(stu.StudentID, "" + var.SchoolYear, "" + var.Semester, var.Subject, field)); break;
                                     case "校排名": row.Add(field, GetRank(stu.StudentID, "" + var.SchoolYear, "" + var.Semester, var.Subject, field)); break;
                                     case "校排名母數": row.Add(field, GetRank(stu.StudentID, "" + var.SchoolYear, "" + var.Semester, var.Subject, field)); break;
+                                    case "類別": row.Add(field, GetRank(stu.StudentID, "" + var.SchoolYear, "" + var.Semester, var.Subject, field)); break;
                                     case "類排名": row.Add(field, GetRank(stu.StudentID, "" + var.SchoolYear, "" + var.Semester, var.Subject, field)); break;
                                     case "類排名母數": row.Add(field, GetRank(stu.StudentID, "" + var.SchoolYear, "" + var.Semester, var.Subject, field)); break;
 
@@ -331,6 +333,7 @@ namespace SmartSchool.Evaluation.ImportExport
                             case "科排名母數": rank = record.GetDeptCount(subject); break;
                             case "校排名": rank = record.GetYearRank(subject); break;
                             case "校排名母數": rank = record.GetYearCount(subject); break;
+                            case "類別": rank = record.Group1; break;
                             case "類排名": rank = record.GetGroup1Rank(subject); break;
                             case "類排名母數": rank = record.GetGroup1Count(subject); break;
 

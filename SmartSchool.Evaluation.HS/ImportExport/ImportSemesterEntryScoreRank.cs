@@ -23,6 +23,40 @@ namespace SmartSchool.Evaluation.ImportExport
             this.Title = "匯入學期分項成績";
             this.Group = "學期分項成績";
             this.PackageLimit = 500;
+            //foreach (string field in new string[] { "學年度"
+            //    , "學期"
+            //    , "成績年級"
+            //    , "學業"
+            //    , "體育"
+            //    , "國防通識"
+            //    , "健康與護理"
+            //    , "實習科目"
+            //    , "專業科目"
+            //    , "學業(原始)"
+            //    , "體育(原始)"
+            //    , "國防通識(原始)"
+            //    , "健康與護理(原始)"
+            //    , "實習科目(原始)"
+            //    , "專業科目(原始)"
+            //    , "德行"
+            //    , "學業成績班排名"
+            //    , "學業成績班排名母數"
+            //    , "學業成績科排名"
+            //    , "學業成績科排名母數"
+            //    , "學業成績校排名"
+            //    , "學業成績校排名母數"
+            //    , "學業成績排名類別1"
+            //    , "學業成績類1排名"
+            //    , "學業成績類1排名母數"
+            //    , "學業成績排名類別2"
+            //    , "學業成績類2排名"
+            //    , "學業成績類2排名母數"})
+
+            //{
+            //    this.ImportableFields.Add(field);
+            //}
+
+            // 2018/8 穎驊註解，經過討論後， 先暫時將 ischool類別2 排名的概念拿掉，因為目前的結構 無法區隔類別1、類別2，待日後設計完整
             foreach (string field in new string[] { "學年度"
                 , "學期"
                 , "成績年級"
@@ -48,13 +82,12 @@ namespace SmartSchool.Evaluation.ImportExport
                 , "學業成績排名類別1"
                 , "學業成績類1排名"
                 , "學業成績類1排名母數"
-                , "學業成績排名類別2"
-                , "學業成績類2排名"
-                , "學業成績類2排名母數"})
+                })
 
             {
                 this.ImportableFields.Add(field);
             }
+
             foreach (string field in new string[] { "學年度", "學期" })
             {
                 this.RequiredFields.Add(field);
@@ -507,8 +540,10 @@ namespace SmartSchool.Evaluation.ImportExport
 
                         //類別1 排名
                         var tag1Rating = doc.CreateElement("Rating"); tag1Rating.SetAttribute("範圍人數", "0"); tag1Rating.SetAttribute("類別", "");
-                        //類別2 排名
-                        var tag2Rating = doc.CreateElement("Rating"); tag2Rating.SetAttribute("範圍人數", "0"); tag2Rating.SetAttribute("類別", "");
+
+                        // 2018/8 穎驊註解，經過討論後， 先暫時將 ischool類別2 排名的概念拿掉，因為目前的結構 無法區隔類別1、類別2，待日後設計完整
+                        ////類別2 排名
+                        //var tag2Rating = doc.CreateElement("Rating"); tag2Rating.SetAttribute("範圍人數", "0"); tag2Rating.SetAttribute("類別", "");
 
                         // 整理舊資料
                         if (StudSemsEntryRatingDict.ContainsKey(id))
@@ -531,20 +566,20 @@ namespace SmartSchool.Evaluation.ImportExport
                                         tag1Rating.SetAttribute("範圍人數", "" + sser.Group1Count);
                                         tag1Rating.SetAttribute("類別", "" + sser.Group1);
                                     }
-                                    // 類2
-                                    if (sser.Group2 != "")
-                                    {
-                                        var item = doc.CreateElement("Item");
-                                        item.SetAttribute("成績", "" + sser.Score);
-                                        item.SetAttribute("成績人數", "" + sser.Group2Count);
-                                        item.SetAttribute("排名", "" + sser.Group2Rank);
-                                        item.SetAttribute("分項", "學業");
+                                    //// 類2
+                                    //if (sser.Group2 != "")
+                                    //{
+                                    //    var item = doc.CreateElement("Item");
+                                    //    item.SetAttribute("成績", "" + sser.Score);
+                                    //    item.SetAttribute("成績人數", "" + sser.Group2Count);
+                                    //    item.SetAttribute("排名", "" + sser.Group2Rank);
+                                    //    item.SetAttribute("分項", "學業");
 
-                                        tag2Rating.AppendChild(item);
+                                    //    tag2Rating.AppendChild(item);
 
-                                        tag2Rating.SetAttribute("範圍人數", "" + sser.Group2Count);
-                                        tag2Rating.SetAttribute("類別", "" + sser.Group2);
-                                    }
+                                    //    tag2Rating.SetAttribute("範圍人數", "" + sser.Group2Count);
+                                    //    tag2Rating.SetAttribute("類別", "" + sser.Group2);
+                                    //}
                                 }
                             }
                         }
@@ -661,38 +696,38 @@ namespace SmartSchool.Evaluation.ImportExport
                         }
 
                         // 類別2 排名匯入
-                        if (e.ImportFields.Contains("學業成績類2排名"))
-                        {
-                            tag2Rating.RemoveAll();
+                        //if (e.ImportFields.Contains("學業成績類2排名"))
+                        //{
+                        //    tag2Rating.RemoveAll();
 
-                            hastag2Rating = true;
-                            if (row["學業成績類2排名"] == "")
-                            {
-                                clearTag2Raging = true;
-                            }
-                            else
-                            {
+                        //    hastag2Rating = true;
+                        //    if (row["學業成績類2排名"] == "")
+                        //    {
+                        //        clearTag2Raging = true;
+                        //    }
+                        //    else
+                        //    {
 
 
-                                var item = doc.CreateElement("Item");
-                                item.SetAttribute("成績", "" + (e.ImportFields.Contains("學業") ? row["學業"] : ((semesterScoreDictionary.ContainsKey(sy) && semesterScoreDictionary[sy].ContainsKey(se) && semesterScoreDictionary[sy][se].ContainsKey("學業")) ? semesterScoreDictionary[sy][se]["學業"].Score.ToString() : "0")));
-                                if (e.ImportFields.Contains("學業成績類2排名母數"))
-                                {
-                                    item.SetAttribute("成績人數", "" + row["學業成績類2排名母數"]);
-                                    tag2Rating.SetAttribute("範圍人數", "" + row["學業成績類2排名母數"]);
-                                }
-                                else
-                                {
-                                    item.SetAttribute("成績人數", "0");
-                                    tag2Rating.SetAttribute("範圍人數", "0");
-                                }
-                                item.SetAttribute("排名", "" + row["學業成績類2排名"]);
-                                item.SetAttribute("分項", "學業");
-                                tag2Rating.AppendChild(item);
+                        //        var item = doc.CreateElement("Item");
+                        //        item.SetAttribute("成績", "" + (e.ImportFields.Contains("學業") ? row["學業"] : ((semesterScoreDictionary.ContainsKey(sy) && semesterScoreDictionary[sy].ContainsKey(se) && semesterScoreDictionary[sy][se].ContainsKey("學業")) ? semesterScoreDictionary[sy][se]["學業"].Score.ToString() : "0")));
+                        //        if (e.ImportFields.Contains("學業成績類2排名母數"))
+                        //        {
+                        //            item.SetAttribute("成績人數", "" + row["學業成績類2排名母數"]);
+                        //            tag2Rating.SetAttribute("範圍人數", "" + row["學業成績類2排名母數"]);
+                        //        }
+                        //        else
+                        //        {
+                        //            item.SetAttribute("成績人數", "0");
+                        //            tag2Rating.SetAttribute("範圍人數", "0");
+                        //        }
+                        //        item.SetAttribute("排名", "" + row["學業成績類2排名"]);
+                        //        item.SetAttribute("分項", "學業");
+                        //        tag2Rating.AppendChild(item);
 
-                                tag2Rating.SetAttribute("類別", "" + row["學業成績排名類別2"]);
-                            }
-                        }
+                        //        tag2Rating.SetAttribute("類別", "" + row["學業成績排名類別2"]);
+                        //    }
+                        //}
                         if (hasclassRating || hasdeptRating || hasschoolRating || hastag1Rating || hastag2Rating)
                         {
                             string updateSql = "update sems_entry_score set ";
@@ -730,58 +765,69 @@ namespace SmartSchool.Evaluation.ImportExport
                                     updateSql += "year_rating='" + schoolRating.OuterXml + "'";
                             }
 
-                            // 僅匯入類1排名， 若類2排名有資料則保留
-                            if (hastag1Rating && !hastag2Rating)
+
+                            // 2018/8 穎驊註解，經過討論後， 先暫時將 ischool類別2 排名的概念拿掉，因為目前的結構 無法區隔類別1、類別2，待日後設計完整
+
+                            //// 僅匯入類1排名， 若類2排名有資料則保留
+                            //if (hastag1Rating && !hastag2Rating)
+                            //{
+                            //    if (updateSql != "update sems_entry_score set ")
+                            //    {
+                            //        updateSql += ",";
+                            //    }
+                            //    if (clearTag1Raging) //清除類1 保留類2
+                            //        updateSql += "group_rating='<Ratings>" + tag2Rating.OuterXml + "</Ratings>'";
+                            //    else
+                            //        updateSql += "group_rating='<Ratings>" + tag1Rating.OuterXml + tag2Rating.OuterXml + "</Ratings>'";
+                            //}
+
+
+                            //// 僅匯入類2排名， 若類1排名有資料則保留
+                            //if (hastag2Rating && !hastag1Rating)
+                            //{
+                            //    if (updateSql != "update sems_entry_score set ")
+                            //    {
+                            //        updateSql += ",";
+                            //    }
+                            //    if (clearTag2Raging) // 清除類2，保留類1
+                            //        updateSql += "group_rating='<Ratings>" + tag1Rating.OuterXml + "</Ratings>'";
+                            //    else
+                            //        updateSql += "group_rating='<Ratings>" + tag1Rating.OuterXml + tag2Rating.OuterXml + "</Ratings>'";
+                            //}
+
+                            //// 同時匯入類1、類2 排名
+                            //if (hastag1Rating && hastag2Rating)
+                            //{
+                            //    if (updateSql != "update sems_entry_score set ")
+                            //    {
+                            //        updateSql += ",";
+                            //    }
+                            //    if (clearTag1Raging && clearTag2Raging) // 清除類1 類2
+                            //    {
+                            //        updateSql += "group_rating=null";
+                            //    }
+                            //    else if (clearTag1Raging && !clearTag2Raging) //清除類1 保留類2
+                            //    {
+                            //        updateSql += "group_rating='<Ratings>" + tag2Rating.OuterXml + "</Ratings>'";
+                            //    }
+                            //    else if(!clearTag1Raging && clearTag2Raging) //清除類2 保留類1
+                            //    {
+                            //        updateSql += "group_rating='<Ratings>" + tag1Rating.OuterXml + "</Ratings>'";
+                            //    }
+                            //    else // 都上傳
+                            //        updateSql += "group_rating='<Ratings>" + tag1Rating.OuterXml + tag2Rating.OuterXml + "</Ratings>'";
+                            //}
+
+
+                            // 僅匯入類1排名
+                            if (hastag1Rating)
                             {
                                 if (updateSql != "update sems_entry_score set ")
                                 {
                                     updateSql += ",";
-                                }
-                                if (clearTag1Raging) //清除類1 保留類2
-                                    updateSql += "group_rating='<Ratings>" + tag2Rating.OuterXml + "</Ratings>'";
-                                else
-                                    updateSql += "group_rating='<Ratings>" + tag1Rating.OuterXml + tag2Rating.OuterXml + "</Ratings>'";
-                            }
-
-
-                            // 僅匯入類2排名， 若類1排名有資料則保留
-                            if (hastag2Rating && !hastag1Rating)
-                            {
-                                if (updateSql != "update sems_entry_score set ")
-                                {
-                                    updateSql += ",";
-                                }
-                                if (clearTag2Raging) // 清除類2，保留類1
+                                }             
                                     updateSql += "group_rating='<Ratings>" + tag1Rating.OuterXml + "</Ratings>'";
-                                else
-                                    updateSql += "group_rating='<Ratings>" + tag1Rating.OuterXml + tag2Rating.OuterXml + "</Ratings>'";
                             }
-
-                            // 同時匯入類1、類2 排名
-                            if (hastag1Rating && hastag2Rating)
-                            {
-                                if (updateSql != "update sems_entry_score set ")
-                                {
-                                    updateSql += ",";
-                                }
-                                if (clearTag1Raging && clearTag2Raging) // 清除類1 類2
-                                {
-                                    updateSql += "group_rating=null";
-                                }
-                                else if (clearTag1Raging && !clearTag2Raging) //清除類1 保留類2
-                                {
-                                    updateSql += "group_rating='<Ratings>" + tag2Rating.OuterXml + "</Ratings>'";
-                                }
-                                else if(!clearTag1Raging && clearTag2Raging) //清除類2 保留類1
-                                {
-                                    updateSql += "group_rating='<Ratings>" + tag1Rating.OuterXml + "</Ratings>'";
-                                }
-                                else // 都上傳
-                                    updateSql += "group_rating='<Ratings>" + tag1Rating.OuterXml + tag2Rating.OuterXml + "</Ratings>'";
-                            }
-
-
-
 
 
                             updateSql += " WHERE ref_student_id =" + id + " and school_year=" + sy + " and semester=" + se + " and entry_group=1;";

@@ -31,6 +31,11 @@ namespace SmartSchool.Evaluation
         // 年排名
         private Dictionary<string, int> _YearRankDict = new Dictionary<string, int>();
 
+        /// <summary>
+        /// 類1名稱
+        /// </summary>
+        public string Group1 { get; set; }
+
         // 類1成績人數
         private Dictionary<string, int> _Group1CountDict = new Dictionary<string, int>();
 

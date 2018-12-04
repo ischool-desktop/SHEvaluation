@@ -689,6 +689,7 @@
     <Compile Include="EventHub.cs" />
     <Compile Include="SecureButtonAdapter.cs" />
     <Compile Include="StudSemsEntryRating.cs" />
+    <Compile Include="StudSemsSubjRatingXML.cs" />
     <Compile Include="StudSemsSubjRating.cs" />
     <Compile Include="SubjectTable.cs" />
     <Compile Include="UpdateHelper.cs" />

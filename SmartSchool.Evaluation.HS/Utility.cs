@@ -235,35 +235,36 @@ namespace SmartSchool.Evaluation
                                 }
                                 else
                                 {
-                                    if (elmR.Attribute("類別") != null && elmR.Attribute("類別").Value != "")
-                                    {
-                                        sser.Group2 = elmR.Attribute("類別").Value;
-                                    }
+                                    // 2018/8 穎驊註解，經過討論後， 先暫時將 ischool類別2 排名的概念拿掉，因為目前的結構 無法區隔類別1、類別2，待日後設計完整
+                                    //if (elmR.Attribute("類別") != null && elmR.Attribute("類別").Value != "")
+                                    //{
+                                    //    sser.Group2 = elmR.Attribute("類別").Value;
+                                    //}
 
-                                    foreach (XElement elm in elmR.Elements("Item"))
-                                    {
-                                        if (elm.Attribute("分項") != null && elm.Attribute("分項").Value == "學業")
-                                        {
-                                            if (elm.Attribute("成績人數") != null && elm.Attribute("成績人數").Value != "")
-                                            {
-                                                int x;
-                                                if (int.TryParse(elm.Attribute("成績人數").Value, out x))
-                                                    sser.Group2Count = x;
-                                            }
+                                    //foreach (XElement elm in elmR.Elements("Item"))
+                                    //{
+                                    //    if (elm.Attribute("分項") != null && elm.Attribute("分項").Value == "學業")
+                                    //    {
+                                    //        if (elm.Attribute("成績人數") != null && elm.Attribute("成績人數").Value != "")
+                                    //        {
+                                    //            int x;
+                                    //            if (int.TryParse(elm.Attribute("成績人數").Value, out x))
+                                    //                sser.Group2Count = x;
+                                    //        }
 
-                                            if (elm.Attribute("排名") != null && elm.Attribute("排名").Value != "")
-                                            {
-                                                int x;
-                                                if (int.TryParse(elm.Attribute("排名").Value, out x))
-                                                    sser.Group2Rank = x;
-                                            }
+                                    //        if (elm.Attribute("排名") != null && elm.Attribute("排名").Value != "")
+                                    //        {
+                                    //            int x;
+                                    //            if (int.TryParse(elm.Attribute("排名").Value, out x))
+                                    //                sser.Group2Rank = x;
+                                    //        }
 
-                                            if (elm.Attribute("成績") != null && elm.Attribute("成績").Value != "")
-                                            {
-                                               sser.Score = "" + elm.Attribute("成績").Value;
-                                            }
-                                        }
-                                    }
+                                    //        if (elm.Attribute("成績") != null && elm.Attribute("成績").Value != "")
+                                    //        {
+                                    //           sser.Score = "" + elm.Attribute("成績").Value;
+                                    //        }
+                                    //    }
+                                    //}
 
                                 }
 
@@ -402,6 +403,12 @@ namespace SmartSchool.Evaluation
                         XElement elmC = XElement.Parse(g1Str);
                         foreach (XElement elmR in elmC.Elements("Rating"))
                         {
+
+                            if (elmR.Attribute("類別") != null && elmR.Attribute("類別").Value != "")
+                            {
+                                sser.Group1 = elmR.Attribute("類別").Value;
+                            }
+
                             foreach (XElement elm in elmR.Elements("Item"))
                             {
                                 if (elm.Attribute("科目") != null)
@@ -416,21 +423,48 @@ namespace SmartSchool.Evaluation
                             }
                             break;
                         }
-                            
+
                     }
                 }
                 catch (Exception ex) { }
 
                 _retValue[sid].Add(sser);
             }
-
-
-
-
             return _retValue;
         }
 
 
+        // 2018/12/04 穎驊 新增 此為專門抓取 學生排名資料 Rating Xml 的方法
+        public static Dictionary<string, List<StudSemsSubjRatingXML>> GetStudSemsSubjRatingXMLByStudentID(List<string> StudentIDList)
+        {
+            Dictionary<string, List<StudSemsSubjRatingXML>> _retValue = new Dictionary<string, List<StudSemsSubjRatingXML>>();
+
+
+            QueryHelper qh = new QueryHelper();
+            string query = "select ref_student_id as sid,school_year,semester,grade_year,class_rating,dept_rating,year_rating,group_rating from sems_subj_score where ref_student_id in (" + string.Join(",", StudentIDList.ToArray()) + ")  order by ref_student_id,grade_year,semester";
+
+            DataTable dt = qh.Select(query);
+            foreach (DataRow dr in dt.Rows)
+            {
+                string sid = dr["sid"].ToString();
+
+                if (!_retValue.ContainsKey(sid))
+                    _retValue.Add(sid, new List<StudSemsSubjRatingXML>());
+
+                StudSemsSubjRatingXML sserx = new StudSemsSubjRatingXML();
+                sserx.StudentID = sid;
+                sserx.SchoolYear = dr["school_year"].ToString();
+                sserx.Semester = dr["semester"].ToString();
+                sserx.GradeYear = dr["grade_year"].ToString();
+                sserx.ClassRankXML = dr["class_rating"].ToString();
+                sserx.DeptRankXML = dr["dept_rating"].ToString();
+                sserx.YearRankXML = dr["year_rating"].ToString();
+                sserx.GroupRankXML = dr["group_rating"].ToString();
+               
+                _retValue[sid].Add(sserx);
+            }
+            return _retValue;
+        }
 
 
     }
