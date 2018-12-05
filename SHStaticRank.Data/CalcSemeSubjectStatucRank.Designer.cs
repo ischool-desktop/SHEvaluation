@@ -153,9 +153,9 @@
             this.labelX1.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
             this.labelX1.Location = new System.Drawing.Point(36, 3);
             this.labelX1.Name = "labelX1";
-            this.labelX1.Size = new System.Drawing.Size(82, 21);
+            this.labelX1.Size = new System.Drawing.Size(74, 21);
             this.labelX1.TabIndex = 13;
-            this.labelX1.Text = "類別排名1：";
+            this.labelX1.Text = "類別排名：";
             // 
             // cboTagRank1
             // 
@@ -179,11 +179,12 @@
             // 
             this.labelX5.BackgroundStyle.Class = "";
             this.labelX5.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
-            this.labelX5.Location = new System.Drawing.Point(36, 36);
+            this.labelX5.Location = new System.Drawing.Point(165, 361);
             this.labelX5.Name = "labelX5";
             this.labelX5.Size = new System.Drawing.Size(82, 21);
             this.labelX5.TabIndex = 15;
             this.labelX5.Text = "類別排名2：";
+            this.labelX5.Visible = false;
             // 
             // cboTagRank2
             // 
@@ -192,11 +193,12 @@
             this.cboTagRank2.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cboTagRank2.FormattingEnabled = true;
             this.cboTagRank2.ItemHeight = 19;
-            this.cboTagRank2.Location = new System.Drawing.Point(125, 34);
+            this.cboTagRank2.Location = new System.Drawing.Point(253, 357);
             this.cboTagRank2.Name = "cboTagRank2";
-            this.cboTagRank2.Size = new System.Drawing.Size(160, 25);
+            this.cboTagRank2.Size = new System.Drawing.Size(56, 25);
             this.cboTagRank2.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
             this.cboTagRank2.TabIndex = 14;
+            this.cboTagRank2.Visible = false;
             // 
             // groupPanel1
             // 
@@ -460,12 +462,10 @@
             this.groupPanel2.ColorSchemeStyle = DevComponents.DotNetBar.eDotNetBarStyle.Office2007;
             this.groupPanel2.Controls.Add(this.labelX1);
             this.groupPanel2.Controls.Add(this.cboTagRank1);
-            this.groupPanel2.Controls.Add(this.cboTagRank2);
-            this.groupPanel2.Controls.Add(this.labelX5);
             this.groupPanel2.DrawTitleBox = false;
             this.groupPanel2.Location = new System.Drawing.Point(12, 283);
             this.groupPanel2.Name = "groupPanel2";
-            this.groupPanel2.Size = new System.Drawing.Size(298, 95);
+            this.groupPanel2.Size = new System.Drawing.Size(298, 64);
             // 
             // 
             // 
@@ -511,7 +511,7 @@
             this.chkDoNotSaveIt.Checked = true;
             this.chkDoNotSaveIt.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chkDoNotSaveIt.CheckValue = "Y";
-            this.chkDoNotSaveIt.Location = new System.Drawing.Point(12, 415);
+            this.chkDoNotSaveIt.Location = new System.Drawing.Point(11, 389);
             this.chkDoNotSaveIt.Name = "chkDoNotSaveIt";
             this.chkDoNotSaveIt.Size = new System.Drawing.Size(147, 21);
             this.chkDoNotSaveIt.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -523,7 +523,7 @@
             this.buttonX1.AccessibleRole = System.Windows.Forms.AccessibleRole.PushButton;
             this.buttonX1.BackColor = System.Drawing.Color.Transparent;
             this.buttonX1.ColorTable = DevComponents.DotNetBar.eButtonColor.OrangeWithBackground;
-            this.buttonX1.Location = new System.Drawing.Point(235, 414);
+            this.buttonX1.Location = new System.Drawing.Point(234, 388);
             this.buttonX1.Name = "buttonX1";
             this.buttonX1.Size = new System.Drawing.Size(75, 23);
             this.buttonX1.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -543,7 +543,7 @@
             this.chk計算學業成績排名.Checked = true;
             this.chk計算學業成績排名.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chk計算學業成績排名.CheckValue = "Y";
-            this.chk計算學業成績排名.Location = new System.Drawing.Point(13, 388);
+            this.chk計算學業成績排名.Location = new System.Drawing.Point(12, 362);
             this.chk計算學業成績排名.Name = "chk計算學業成績排名";
             this.chk計算學業成績排名.Size = new System.Drawing.Size(134, 21);
             this.chk計算學業成績排名.Style = DevComponents.DotNetBar.eDotNetBarStyle.StyleManagerControlled;
@@ -554,9 +554,11 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(320, 445);
+            this.ClientSize = new System.Drawing.Size(320, 417);
             this.Controls.Add(this.buttonX1);
             this.Controls.Add(this.chk計算學業成績排名);
+            this.Controls.Add(this.labelX5);
+            this.Controls.Add(this.cboTagRank2);
             this.Controls.Add(this.chkDoNotSaveIt);
             this.Controls.Add(this.groupPanel2);
             this.Controls.Add(this.groupPanel3);
@@ -567,7 +569,7 @@
             this.Controls.Add(this.cboSchoolYear);
             this.DoubleBuffered = true;
             this.MaximumSize = new System.Drawing.Size(336, 484);
-            this.MinimumSize = new System.Drawing.Size(336, 484);
+            this.MinimumSize = new System.Drawing.Size(336, 456);
             this.Name = "CalcSemeSubjectStatucRank";
             this.Text = "計算學期成績固定排名";
             this.Load += new System.EventHandler(this.CalcSemeSubjectStatucRank_Load);

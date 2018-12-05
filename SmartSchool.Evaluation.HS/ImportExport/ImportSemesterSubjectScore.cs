@@ -1229,10 +1229,7 @@ namespace SmartSchool.Evaluation.ImportExport
                                             tag1Rating.SetAttribute("類別", "" + row["類別"]);
                                         }
                                     }
-
-
-                                    
-                                    
+                                                                        
                                     #endregion
                                 }
                             }
@@ -1244,53 +1241,63 @@ namespace SmartSchool.Evaluation.ImportExport
 
 
                                 #region 加入 舊有  排名資料 xml， 本次沒有更新到的，要還原給它
-                                // 班
-                                XElement elmC = semesterScoreRankDictionary[sy][se]["class_rating"];
 
-                                foreach (XElement oldClassRank in elmC.Elements("Item"))
+                                try
                                 {
-                                    using (XmlReader xmlReader = oldClassRank.CreateReader())
+                                    // 班
+                                    XElement elmC = semesterScoreRankDictionary[sy][se]["class_rating"];
+
+                                    foreach (XElement oldClassRank in elmC.Elements("Item"))
                                     {
-                                        doc.Load(xmlReader);
-                                        classRating.AppendChild(doc.FirstChild);
+                                        using (XmlReader xmlReader = oldClassRank.CreateReader())
+                                        {
+                                            doc.Load(xmlReader);
+                                            classRating.AppendChild(doc.FirstChild);
+                                        }
                                     }
+
+                                    // 科
+                                    XElement elmD = semesterScoreRankDictionary[sy][se]["dept_rating"];
+
+                                    foreach (XElement oldClassRank in elmD.Elements("Item"))
+                                    {
+                                        using (XmlReader xmlReader = oldClassRank.CreateReader())
+                                        {
+                                            doc.Load(xmlReader);
+                                            classRating.AppendChild(doc.FirstChild);
+                                        }
+                                    }
+
+                                    // 校
+                                    XElement elmY = semesterScoreRankDictionary[sy][se]["year_rating"];
+
+                                    foreach (XElement oldClassRank in elmY.Elements("Item"))
+                                    {
+                                        using (XmlReader xmlReader = oldClassRank.CreateReader())
+                                        {
+                                            doc.Load(xmlReader);
+                                            classRating.AppendChild(doc.FirstChild);
+                                        }
+                                    }
+
+                                    // 類別
+                                    XElement elmG = semesterScoreRankDictionary[sy][se]["group_rating"];
+
+                                    foreach (XElement oldClassRank in elmG.Element("Rating").Elements("Item"))
+                                    {
+                                        using (XmlReader xmlReader = oldClassRank.CreateReader())
+                                        {
+                                            doc.Load(xmlReader);
+                                            classRating.AppendChild(doc.FirstChild);
+                                        }
+                                    }
+
+                                }
+                                catch
+                                {
+
                                 }
 
-                                // 科
-                                XElement elmD = semesterScoreRankDictionary[sy][se]["dept_rating"];
-
-                                foreach (XElement oldClassRank in elmD.Elements("Item"))
-                                {
-                                    using (XmlReader xmlReader = oldClassRank.CreateReader())
-                                    {
-                                        doc.Load(xmlReader);
-                                        classRating.AppendChild(doc.FirstChild);
-                                    }
-                                }
-
-                                // 校
-                                XElement elmY = semesterScoreRankDictionary[sy][se]["year_rating"];
-
-                                foreach (XElement oldClassRank in elmY.Elements("Item"))
-                                {
-                                    using (XmlReader xmlReader = oldClassRank.CreateReader())
-                                    {
-                                        doc.Load(xmlReader);
-                                        classRating.AppendChild(doc.FirstChild);
-                                    }
-                                }
-
-                                // 類別
-                                XElement elmG = semesterScoreRankDictionary[sy][se]["group_rating"];
-
-                                foreach (XElement oldClassRank in elmG.Element("Rating").Elements("Item"))
-                                {
-                                    using (XmlReader xmlReader = oldClassRank.CreateReader())
-                                    {
-                                        doc.Load(xmlReader);
-                                        classRating.AppendChild(doc.FirstChild);
-                                    }
-                                } 
                                 #endregion
 
                                 string updateSql = "update sems_subj_score set ";
@@ -1409,6 +1416,21 @@ namespace SmartSchool.Evaluation.ImportExport
                     {
                         foreach (int se in insertNewSemesterScore[sy].Keys)
                         {
+                            bool hasclassRating = false;
+                            bool hasdeptRating = false;
+                            bool hasschoolRating = false;
+                            bool hastag1Rating = false;
+                            bool hastag2Rating = false;
+
+
+                            var classRating = doc.CreateElement("Rating"); classRating.SetAttribute("範圍人數", "0");
+                            var deptRating = doc.CreateElement("Rating"); deptRating.SetAttribute("範圍人數", "0");
+                            var schoolRating = doc.CreateElement("Rating"); schoolRating.SetAttribute("範圍人數", "0");
+
+                            //類別 排名
+                            var tag1Rating = doc.CreateElement("Rating"); tag1Rating.SetAttribute("範圍人數", "0"); tag1Rating.SetAttribute("類別", "");
+
+
                             XmlElement subjectScoreInfo = doc.CreateElement("SemesterSubjectScoreInfo");
                             string gradeyear = "" + semesterGradeYear[sy][se];//抓年級
                             foreach (RowData row in insertNewSemesterScore[sy][se])
@@ -1503,8 +1525,292 @@ namespace SmartSchool.Evaluation.ImportExport
                                 }
                                 #endregion
                                 subjectScoreInfo.AppendChild(newScore);
+
+                                #region 排名
+                                if (e.ImportFields.Contains("班排名"))
+                                {
+                                    hasclassRating = true;
+                                    if (row["班排名"] == "")
+                                    {
+                                        //clearClassRating = true;
+                                    }
+                                    else
+                                    {
+                                        var item = doc.CreateElement("Item");
+                                        item.SetAttribute("成績", "" + (e.ImportFields.Contains("原始成績") ? row["原始成績"] : ((semesterScoreDictionary.ContainsKey(sy) && semesterScoreDictionary[sy].ContainsKey(se) && semesterScoreDictionary[sy][se].ContainsKey("原始成績")) ? semesterScoreDictionary[sy][se]["原始成績"].Score.ToString() : "0")));
+                                        if (e.ImportFields.Contains("班排名母數"))
+                                        {
+                                            item.SetAttribute("成績人數", "" + row["班排名母數"]);
+                                            classRating.SetAttribute("範圍人數", "" + row["班排名母數"]);
+                                        }
+                                        else
+                                        {
+                                            item.SetAttribute("成績人數", "0");
+                                            classRating.SetAttribute("範圍人數", "0");
+                                        }
+                                        item.SetAttribute("排名", "" + row["班排名"]);
+                                        item.SetAttribute("科目", "" + row["科目"]);
+                                        item.SetAttribute("科目級別", "" + row["科目級別"]);
+                                        classRating.AppendChild(item);
+                                    }
+                                }
+                                if (e.ImportFields.Contains("科排名"))
+                                {
+                                    hasdeptRating = true;
+                                    if (row["科排名"] == "")
+                                    {
+                                        //clearDeptRating = true;
+                                    }
+                                    else
+                                    {
+                                        var item = doc.CreateElement("Item");
+                                        item.SetAttribute("成績", "" + (e.ImportFields.Contains("原始成績") ? row["原始成績"] : ((semesterScoreDictionary.ContainsKey(sy) && semesterScoreDictionary[sy].ContainsKey(se) && semesterScoreDictionary[sy][se].ContainsKey("原始成績")) ? semesterScoreDictionary[sy][se]["原始成績"].Score.ToString() : "0")));
+                                        if (e.ImportFields.Contains("科排名母數"))
+                                        {
+                                            item.SetAttribute("成績人數", "" + row["科排名母數"]);
+                                            deptRating.SetAttribute("範圍人數", "" + row["科排名母數"]);
+                                        }
+                                        else
+                                        {
+                                            item.SetAttribute("成績人數", "0");
+                                            deptRating.SetAttribute("範圍人數", "0");
+                                        }
+                                        item.SetAttribute("排名", "" + row["科排名"]);
+                                        item.SetAttribute("科目", "" + row["科目"]);
+                                        item.SetAttribute("科目級別", "" + row["科目級別"]);
+                                        deptRating.AppendChild(item);
+                                    }
+                                }
+                                if (e.ImportFields.Contains("校排名"))
+                                {
+                                    hasschoolRating = true;
+                                    if (row["校排名"] == "")
+                                    {
+                                        //clearSchoolRating = true;
+                                    }
+                                    else
+                                    {
+                                        var item = doc.CreateElement("Item");
+                                        item.SetAttribute("成績", "" + (e.ImportFields.Contains("原始成績") ? row["原始成績"] : ((semesterScoreDictionary.ContainsKey(sy) && semesterScoreDictionary[sy].ContainsKey(se) && semesterScoreDictionary[sy][se].ContainsKey("原始成績")) ? semesterScoreDictionary[sy][se]["原始成績"].Score.ToString() : "0")));
+                                        if (e.ImportFields.Contains("校排名母數"))
+                                        {
+                                            item.SetAttribute("成績人數", "" + row["校排名母數"]);
+                                            schoolRating.SetAttribute("範圍人數", "" + row["校排名母數"]);
+                                        }
+                                        else
+                                        {
+                                            item.SetAttribute("成績人數", "0");
+                                            schoolRating.SetAttribute("範圍人數", "0");
+                                        }
+                                        item.SetAttribute("排名", "" + row["校排名"]);
+                                        item.SetAttribute("科目", "" + row["科目"]);
+                                        item.SetAttribute("科目級別", "" + row["科目級別"]);
+                                        schoolRating.AppendChild(item);
+                                    }
+                                }
+                                // 類別 排名匯入
+                                if (e.ImportFields.Contains("類排名"))
+                                {
+                                    hastag1Rating = true;
+                                    if (row["類排名"] == "")
+                                    {
+                                        //clearTag1Raging = true;
+                                    }
+                                    else
+                                    {
+                                        var item = doc.CreateElement("Item");
+                                        item.SetAttribute("成績", "" + (e.ImportFields.Contains("原始成績") ? row["原始成績"] : ((semesterScoreDictionary.ContainsKey(sy) && semesterScoreDictionary[sy].ContainsKey(se) && semesterScoreDictionary[sy][se].ContainsKey("原始成績")) ? semesterScoreDictionary[sy][se]["原始成績"].Score.ToString() : "0")));
+                                        if (e.ImportFields.Contains("類排名母數"))
+                                        {
+                                            item.SetAttribute("成績人數", "" + row["類排名母數"]);
+                                            tag1Rating.SetAttribute("範圍人數", "" + row["類排名母數"]);
+                                        }
+                                        else
+                                        {
+                                            item.SetAttribute("成績人數", "0");
+                                            tag1Rating.SetAttribute("範圍人數", "0");
+                                        }
+                                        item.SetAttribute("排名", "" + row["類排名"]);
+                                        item.SetAttribute("科目", "" + row["科目"]);
+                                        item.SetAttribute("科目級別", "" + row["科目級別"]);
+                                        tag1Rating.AppendChild(item);
+
+                                        tag1Rating.SetAttribute("類別", "" + row["類別"]);
+                                    }
+                                }
+
+                                #endregion
                             }
                             insertList.Add(new SmartSchool.Feature.Score.AddScore.InsertInfo(studentRec.StudentID, "" + sy, "" + se, gradeyear, "", subjectScoreInfo));
+
+                            if (hasclassRating || hasdeptRating || hasschoolRating || hastag1Rating || hastag2Rating)
+                            {
+
+                                #region 加入 舊有  排名資料 xml， 本次沒有更新到的，要還原給它
+                                try
+                                {
+                                    // 班
+                                    XElement elmC = semesterScoreRankDictionary[sy][se]["class_rating"];
+
+                                    foreach (XElement oldClassRank in elmC.Elements("Item"))
+                                    {
+                                        using (XmlReader xmlReader = oldClassRank.CreateReader())
+                                        {
+                                            doc.Load(xmlReader);
+                                            classRating.AppendChild(doc.FirstChild);
+                                        }
+                                    }
+
+                                    // 科
+                                    XElement elmD = semesterScoreRankDictionary[sy][se]["dept_rating"];
+
+                                    foreach (XElement oldClassRank in elmD.Elements("Item"))
+                                    {
+                                        using (XmlReader xmlReader = oldClassRank.CreateReader())
+                                        {
+                                            doc.Load(xmlReader);
+                                            classRating.AppendChild(doc.FirstChild);
+                                        }
+                                    }
+
+                                    // 校
+                                    XElement elmY = semesterScoreRankDictionary[sy][se]["year_rating"];
+
+                                    foreach (XElement oldClassRank in elmY.Elements("Item"))
+                                    {
+                                        using (XmlReader xmlReader = oldClassRank.CreateReader())
+                                        {
+                                            doc.Load(xmlReader);
+                                            classRating.AppendChild(doc.FirstChild);
+                                        }
+                                    }
+
+                                    // 類別
+                                    XElement elmG = semesterScoreRankDictionary[sy][se]["group_rating"];
+
+                                    foreach (XElement oldClassRank in elmG.Element("Rating").Elements("Item"))
+                                    {
+                                        using (XmlReader xmlReader = oldClassRank.CreateReader())
+                                        {
+                                            doc.Load(xmlReader);
+                                            classRating.AppendChild(doc.FirstChild);
+                                        }
+                                    }
+
+                                }
+                                catch
+                                {
+
+                                }
+ 
+                                #endregion
+
+                                string updateSql = "update sems_subj_score set ";
+                                if (hasclassRating)
+                                {
+                                    if (updateSql != "update sems_subj_score set ")
+                                    {
+                                        updateSql += ",";
+                                    }
+                                    //if (clearClassRating)
+                                    //    updateSql += "class_rating=null";
+                                    //else
+                                    //    updateSql += "class_rating='" + classRating.OuterXml + "'";
+                                    updateSql += "class_rating='" + classRating.OuterXml + "'";
+                                }
+                                if (hasdeptRating)
+                                {
+                                    if (updateSql != "update sems_subj_score set ")
+                                    {
+                                        updateSql += ",";
+                                    }
+                                    //if (clearDeptRating)
+                                    //    updateSql += "dept_rating=null";
+                                    //else
+                                    //    updateSql += "dept_rating='" + deptRating.OuterXml + "'";
+                                    updateSql += "dept_rating='" + deptRating.OuterXml + "'";
+                                }
+                                if (hasschoolRating)
+                                {
+                                    if (updateSql != "update sems_subj_score set ")
+                                    {
+                                        updateSql += ",";
+                                    }
+                                    //if (clearSchoolRating)
+                                    //    updateSql += "year_rating=null";
+                                    //else
+                                    //    updateSql += "year_rating='" + schoolRating.OuterXml + "'";
+                                    updateSql += "year_rating='" + schoolRating.OuterXml + "'";
+                                }
+
+
+                                // 2018/8 穎驊註解，經過討論後， 先暫時將 ischool類別2 排名的概念拿掉，因為目前的結構 無法區隔類別1、類別2，待日後設計完整
+
+                                //// 僅匯入類1排名， 若類2排名有資料則保留
+                                //if (hastag1Rating && !hastag2Rating)
+                                //{
+                                //    if (updateSql != "update sems_subj_score set ")
+                                //    {
+                                //        updateSql += ",";
+                                //    }
+                                //    if (clearTag1Raging) //清除類1 保留類2
+                                //        updateSql += "group_rating='<Ratings>" + tag2Rating.OuterXml + "</Ratings>'";
+                                //    else
+                                //        updateSql += "group_rating='<Ratings>" + tag1Rating.OuterXml + tag2Rating.OuterXml + "</Ratings>'";
+                                //}
+
+
+                                //// 僅匯入類2排名， 若類1排名有資料則保留
+                                //if (hastag2Rating && !hastag1Rating)
+                                //{
+                                //    if (updateSql != "update sems_subj_score set ")
+                                //    {
+                                //        updateSql += ",";
+                                //    }
+                                //    if (clearTag2Raging) // 清除類2，保留類1
+                                //        updateSql += "group_rating='<Ratings>" + tag1Rating.OuterXml + "</Ratings>'";
+                                //    else
+                                //        updateSql += "group_rating='<Ratings>" + tag1Rating.OuterXml + tag2Rating.OuterXml + "</Ratings>'";
+                                //}
+
+                                //// 同時匯入類1、類2 排名
+                                //if (hastag1Rating && hastag2Rating)
+                                //{
+                                //    if (updateSql != "update sems_subj_score set ")
+                                //    {
+                                //        updateSql += ",";
+                                //    }
+                                //    if (clearTag1Raging && clearTag2Raging) // 清除類1 類2
+                                //    {
+                                //        updateSql += "group_rating=null";
+                                //    }
+                                //    else if (clearTag1Raging && !clearTag2Raging) //清除類1 保留類2
+                                //    {
+                                //        updateSql += "group_rating='<Ratings>" + tag2Rating.OuterXml + "</Ratings>'";
+                                //    }
+                                //    else if(!clearTag1Raging && clearTag2Raging) //清除類2 保留類1
+                                //    {
+                                //        updateSql += "group_rating='<Ratings>" + tag1Rating.OuterXml + "</Ratings>'";
+                                //    }
+                                //    else // 都上傳
+                                //        updateSql += "group_rating='<Ratings>" + tag1Rating.OuterXml + tag2Rating.OuterXml + "</Ratings>'";
+                                //}
+
+
+                                // 僅匯入類1排名
+                                if (hastag1Rating)
+                                {
+                                    if (updateSql != "update sems_subj_score set ")
+                                    {
+                                        updateSql += ",";
+                                    }
+                                    updateSql += "group_rating='<Ratings>" + tag1Rating.OuterXml + "</Ratings>'";
+                                }
+
+
+                                updateSql += " WHERE ref_student_id =" + id + " and school_year=" + sy + " and semester=" + se + " and grade_year=" + gradeyear + "; ";
+                                sql.Add(updateSql);
+                            }
                         }
                     }
                     #endregion
