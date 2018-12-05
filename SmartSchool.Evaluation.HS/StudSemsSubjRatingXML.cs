@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Xml.Linq;
 using System.Text;
 
 namespace SmartSchool.Evaluation
@@ -13,11 +14,11 @@ namespace SmartSchool.Evaluation
 
         public string GradeYear { get; set; }
 
-        public string ClassRankXML { get; set; }
-        public string DeptRankXML { get; set; }
-        public string YearRankXML { get; set; }
+        public XElement ClassRankXML { get; set; }
+        public XElement DeptRankXML { get; set; }
+        public XElement YearRankXML { get; set; }
 
-        public string GroupRankXML { get; set; }
+        public XElement GroupRankXML { get; set; }
 
     }
 }

@@ -8,6 +8,8 @@ using SmartSchool.Common;
 //using SmartSchool.Customization.PlugIn.ImportExport;
 using SmartSchool.Customization.Data;
 using SmartSchool.Customization.Data.StudentExtension;
+using System.Xml.Linq;
+using System.Linq;
 
 namespace SmartSchool.Evaluation.ImportExport
 {
@@ -417,15 +419,15 @@ namespace SmartSchool.Evaluation.ImportExport
                     #endregion
 
                     //該學生的學期科目成績(排名資料) // 2018 穎驊註解，舊API interface 沒有支援 排名屬性， 故另外抓取資料 格式為 <school_year<semester<ramkType,ramkDetailXmlString>>>
-                    Dictionary<int, Dictionary<int, Dictionary<string, string>>> semesterScoreRankDictionary = new Dictionary<int, Dictionary<int, Dictionary<string, string>>>();
+                    Dictionary<int, Dictionary<int, Dictionary<string, XElement>>> semesterScoreRankDictionary = new Dictionary<int, Dictionary<int, Dictionary<string, XElement>>>();
 
                     #region 整理現有的成績資料(排名)
                     foreach (StudSemsSubjRatingXML ratingData in StudSemsSubjRankDict[id])
                     {                        
                         if (!semesterScoreRankDictionary.ContainsKey(int.Parse(ratingData.SchoolYear)))
-                            semesterScoreRankDictionary.Add(int.Parse(ratingData.SchoolYear), new Dictionary<int, Dictionary<string, string>>());
+                            semesterScoreRankDictionary.Add(int.Parse(ratingData.SchoolYear), new Dictionary<int, Dictionary<string, XElement>>());
                         if (!semesterScoreRankDictionary[int.Parse(ratingData.SchoolYear)].ContainsKey(int.Parse(ratingData.Semester)))
-                            semesterScoreRankDictionary[int.Parse(ratingData.SchoolYear)].Add(int.Parse(ratingData.Semester), new Dictionary<string, string>());
+                            semesterScoreRankDictionary[int.Parse(ratingData.SchoolYear)].Add(int.Parse(ratingData.Semester), new Dictionary<string, XElement>());
                         if (!semesterScoreRankDictionary[int.Parse(ratingData.SchoolYear)][int.Parse(ratingData.Semester)].ContainsKey("class_rating"))
                         {
                             semesterScoreRankDictionary[int.Parse(ratingData.SchoolYear)][int.Parse(ratingData.Semester)].Add("class_rating", ratingData.ClassRankXML);
@@ -509,6 +511,7 @@ namespace SmartSchool.Evaluation.ImportExport
                                     if (semesterScoreDictionary[sy][se].ContainsKey(key))
                                     {
                                         SemesterSubjectScoreInfo score = semesterScoreDictionary[sy][se][key];
+                                        
                                         #region 填入此學期的年級資料
                                         if (!semesterGradeYear.ContainsKey(sy))
                                             semesterGradeYear.Add(sy, new Dictionary<int, int>());
@@ -519,12 +522,13 @@ namespace SmartSchool.Evaluation.ImportExport
                                         foreach (string field in e.ImportFields)
                                         {
                                             string value = data[field];
+                                            
                                             switch (field)
                                             {
                                                 default: break;
                                                 case "學分數":
                                                     if (score.Detail.GetAttribute("開課學分數") != value)
-                                                    {
+                                                    {                                                        
                                                         score.Detail.SetAttribute("開課學分數", value);
                                                         hasChanged = true;
                                                     }
@@ -609,8 +613,162 @@ namespace SmartSchool.Evaluation.ImportExport
                                                         hasChanged = true;
                                                     }
                                                     break;
+                                                case "班排名":                                                    
+                                                    // 若原本有資料，值不同 則為更新資料， 若找不到 也是新增資料
+                                                    try
+                                                    {
+                                                        XElement elmC = semesterScoreRankDictionary[sy][se]["class_rating"];
+                                                        XElement elm = elmC.Elements("Item").Single(el => el.Attribute("科目").Value == "" + data["科目"] && el.Attribute("科目級別").Value == "" + data["科目級別"]);
+                                                        if (elm.Attribute("排名").Value != data["班排名"])
+                                                        {
+                                                            hasChanged = true;
+                                                        }
+                                                    }
+                                                    catch
+                                                    {
+                                                        hasChanged = true;
+                                                    }
+                                                    
+                                                    break;
+
+                                                case "班排名母數":
+                                                    // 若原本有資料，值不同 則為更新資料， 若找不到 也是新增資料
+                                                    try
+                                                    {
+                                                        XElement elmC = semesterScoreRankDictionary[sy][se]["class_rating"];
+                                                        XElement elm = elmC.Elements("Item").Single(el => el.Attribute("科目").Value == "" + data["科目"] && el.Attribute("科目級別").Value == "" + data["科目級別"]);
+                                                        if (elm.Attribute("成績人數").Value != data["班排名母數"])
+                                                        {
+                                                            hasChanged = true;
+                                                        }
+                                                    }
+                                                    catch
+                                                    {
+                                                        hasChanged = true;
+                                                    }
+                                                    break;
+                                                case "科排名":
+                                                    // 若原本有資料，值不同 則為更新資料， 若找不到 也是新增資料
+                                                    try
+                                                    {
+                                                        XElement elmD = semesterScoreRankDictionary[sy][se]["dept_rating"];
+                                                        XElement elm = elmD.Elements("Item").Single(el => el.Attribute("科目").Value == "" + data["科目"] && el.Attribute("科目級別").Value == "" + data["科目級別"]);
+                                                        if (elm.Attribute("排名").Value != data["科排名"])
+                                                        {
+                                                            hasChanged = true;
+                                                        }
+                                                    }
+                                                    catch
+                                                    {
+                                                        hasChanged = true;
+                                                    }
+
+                                                    break;
+
+                                                case "科排名母數":
+                                                    // 若原本有資料，值不同 則為更新資料， 若找不到 也是新增資料
+                                                    try
+                                                    {
+                                                        XElement elmD = semesterScoreRankDictionary[sy][se]["dept_rating"];
+                                                        XElement elm = elmD.Elements("Item").Single(el => el.Attribute("科目").Value == "" + data["科目"] && el.Attribute("科目級別").Value == "" + data["科目級別"]);
+                                                        if (elm.Attribute("成績人數").Value != data["科排名母數"])
+                                                        {
+                                                            hasChanged = true;
+                                                        }
+                                                    }
+                                                    catch
+                                                    {
+                                                        hasChanged = true;
+                                                    }
+                                                    break;
+                                                case "校排名":
+                                                    // 若原本有資料，值不同 則為更新資料， 若找不到 也是新增資料
+                                                    try
+                                                    {
+                                                        XElement elmY = semesterScoreRankDictionary[sy][se]["year_rating"];
+                                                        XElement elm = elmY.Elements("Item").Single(el => el.Attribute("科目").Value == "" + data["科目"] && el.Attribute("科目級別").Value == "" + data["科目級別"]);
+                                                        if (elm.Attribute("排名").Value != data["校排名"])
+                                                        {
+                                                            hasChanged = true;
+                                                        }
+                                                    }
+                                                    catch
+                                                    {
+                                                        hasChanged = true;
+                                                    }
+
+                                                    break;
+
+                                                case "校排名母數":
+                                                    // 若原本有資料，值不同 則為更新資料， 若找不到 也是新增資料
+                                                    try
+                                                    {
+                                                        XElement elmY = semesterScoreRankDictionary[sy][se]["year_rating"];
+                                                        XElement elm = elmY.Elements("Item").Single(el => el.Attribute("科目").Value == "" + data["科目"] && el.Attribute("科目級別").Value == "" + data["科目級別"]);
+                                                        if (elm.Attribute("成績人數").Value != data["校排名母數"])
+                                                        {
+                                                            hasChanged = true;
+                                                        }
+                                                    }
+                                                    catch
+                                                    {
+                                                        hasChanged = true;
+                                                    }
+                                                    break;
+                                                case "類別":
+                                                    // 若原本有資料，值不同 則為更新資料， 若找不到 也是新增資料
+                                                    try
+                                                    {
+                                                        XElement elmG = semesterScoreRankDictionary[sy][se]["group_rating"];
+                                                        XElement elm = elmG.Element("Rating"); 
+                                                        if (elm.Attribute("類別").Value != data["類別"])
+                                                        {
+                                                            hasChanged = true;
+                                                        }
+                                                    }
+                                                    catch
+                                                    {
+                                                        hasChanged = true;
+                                                    }
+
+                                                    break;
+                                                case "類排名":
+                                                    // 若原本有資料，值不同 則為更新資料， 若找不到 也是新增資料
+                                                    try
+                                                    {
+                                                        XElement elmG = semesterScoreRankDictionary[sy][se]["group_rating"];
+                                                        XElement elm = elmG.Element("Rating").Elements("Item").Single(el => el.Attribute("科目").Value == "" + data["科目"] && el.Attribute("科目級別").Value == "" + data["科目級別"]);
+                                                        if (elm.Attribute("排名").Value != data["類排名"])
+                                                        {
+                                                            hasChanged = true;
+                                                        }
+                                                    }
+                                                    catch
+                                                    {
+                                                        hasChanged = true;
+                                                    }
+
+                                                    break;
+                                                case "類排名母數":
+                                                    // 若原本有資料，值不同 則為更新資料， 若找不到 也是新增資料
+                                                    try
+                                                    {
+                                                        XElement elmG = semesterScoreRankDictionary[sy][se]["group_rating"];
+                                                        XElement elm = elmG.Element("Rating").Elements("Item").Single(el => el.Attribute("科目").Value == "" + data["科目"] && el.Attribute("科目級別").Value == "" + data["科目級別"]);
+                                                        if (elm.Attribute("成績人數").Value != data["類排名母數"])
+                                                        {
+                                                            hasChanged = true;
+                                                        }
+                                                    }
+                                                    catch
+                                                    {
+                                                        hasChanged = true;
+                                                    }
+                                                    break;
                                             }
                                         }
+
+
                                         #endregion
                                         if (autoCheckPass.Checked)
                                         {
@@ -681,12 +839,7 @@ namespace SmartSchool.Evaluation.ImportExport
                             bool hastag1Rating = false;
                             bool hastag2Rating = false;
 
-                            bool clearClassRating = false;
-                            bool clearDeptRating = false;
-                            bool clearSchoolRating = false;
-
-                            bool clearTag1Raging = false;
-
+                            
                             var classRating = doc.CreateElement("Rating"); classRating.SetAttribute("範圍人數", "0");
                             var deptRating = doc.CreateElement("Rating"); deptRating.SetAttribute("範圍人數", "0");
                             var schoolRating = doc.CreateElement("Rating"); schoolRating.SetAttribute("範圍人數", "0");
@@ -708,6 +861,12 @@ namespace SmartSchool.Evaluation.ImportExport
 
                                 if (semesterImportScoreDictionary[sy][se].ContainsKey(key))
                                 {
+                                    bool clearClassRating = false;
+                                    bool clearDeptRating = false;
+                                    bool clearSchoolRating = false;
+
+                                    bool clearTag1Raging = false;
+
                                     RowData row = semesterImportScoreDictionary[sy][se][key];
 
                                     #region 排名
@@ -736,6 +895,8 @@ namespace SmartSchool.Evaluation.ImportExport
                                             item.SetAttribute("科目", "" + row["科目"]);
                                             item.SetAttribute("科目級別", "" + row["科目級別"]);
                                             classRating.AppendChild(item);
+
+                                            clearClassRating = true;
                                         }
                                     }
                                     if (e.ImportFields.Contains("科排名"))
@@ -763,6 +924,8 @@ namespace SmartSchool.Evaluation.ImportExport
                                             item.SetAttribute("科目", "" + row["科目"]);
                                             item.SetAttribute("科目級別", "" + row["科目級別"]);
                                             deptRating.AppendChild(item);
+
+                                            clearDeptRating = true;
                                         }
                                     }
                                     if (e.ImportFields.Contains("校排名"))
@@ -790,6 +953,8 @@ namespace SmartSchool.Evaluation.ImportExport
                                             item.SetAttribute("科目", "" + row["科目"]);
                                             item.SetAttribute("科目級別", "" + row["科目級別"]);
                                             schoolRating.AppendChild(item);
+
+                                            clearSchoolRating = true;
                                         }
                                     }
                                     // 類別 排名匯入
@@ -820,10 +985,40 @@ namespace SmartSchool.Evaluation.ImportExport
                                             tag1Rating.AppendChild(item);
 
                                             tag1Rating.SetAttribute("類別", "" + row["類別"]);
+
+                                            clearTag1Raging = true;
                                         }
                                     }
                                     #endregion
-                                    
+
+                                    #region 清除在 舊排名xml 重覆的學期科目排名資料
+                                    // 無論是刪除、更新 都把舊 xml 刪掉
+                                    if (clearClassRating)
+                                    {
+                                        XElement elmC = semesterScoreRankDictionary[sy][se]["class_rating"];
+
+                                        elmC.Elements("Item").Where(el => el.Attribute("科目").Value == "" + row["科目"] && el.Attribute("科目級別").Value == "" + row["科目級別"]).Remove();
+                                    }
+                                    if (clearDeptRating)
+                                    {
+                                        XElement elmD = semesterScoreRankDictionary[sy][se]["dept_rating"];
+
+                                        elmD.Elements("Item").Where(el => el.Attribute("科目").Value == "" + row["科目"] && el.Attribute("科目級別").Value == "" + row["科目級別"]).Remove();
+                                    }
+                                    if (clearSchoolRating)
+                                    {
+                                        XElement elmY = semesterScoreRankDictionary[sy][se]["year_rating"];
+
+                                        elmY.Elements("Item").Where(el => el.Attribute("科目").Value == "" + row["科目"] && el.Attribute("科目級別").Value == "" + row["科目級別"]).Remove();
+                                    }
+                                    if (clearTag1Raging)
+                                    {
+                                        XElement elmG = semesterScoreRankDictionary[sy][se]["group_rating"];
+
+                                        elmG.Element("Rating").Elements("Item").Where(el => el.Attribute("科目").Value == "" + row["科目"] && el.Attribute("科目級別").Value == "" + row["科目級別"]).Remove();
+                                    } 
+                                    #endregion
+
                                 }
                             }
                             if (updatedNewSemesterScore.ContainsKey(sy) && updatedNewSemesterScore[sy].ContainsKey(se))
@@ -928,7 +1123,7 @@ namespace SmartSchool.Evaluation.ImportExport
                                         hasclassRating = true;
                                         if (row["班排名"] == "")
                                         {
-                                            clearClassRating = true;
+                                            //clearClassRating = true;
                                         }
                                         else
                                         {
@@ -955,7 +1150,7 @@ namespace SmartSchool.Evaluation.ImportExport
                                         hasdeptRating = true;
                                         if (row["科排名"] == "")
                                         {
-                                            clearDeptRating = true;
+                                            //clearDeptRating = true;
                                         }
                                         else
                                         {
@@ -982,7 +1177,7 @@ namespace SmartSchool.Evaluation.ImportExport
                                         hasschoolRating = true;
                                         if (row["校排名"] == "")
                                         {
-                                            clearSchoolRating = true;
+                                            //clearSchoolRating = true;
                                         }
                                         else
                                         {
@@ -1010,7 +1205,7 @@ namespace SmartSchool.Evaluation.ImportExport
                                         hastag1Rating = true;
                                         if (row["類排名"] == "")
                                         {
-                                            clearTag1Raging = true;
+                                            //clearTag1Raging = true;
                                         }
                                         else
                                         {
@@ -1046,6 +1241,58 @@ namespace SmartSchool.Evaluation.ImportExport
 
                             if (hasclassRating || hasdeptRating || hasschoolRating || hastag1Rating || hastag2Rating)
                             {
+
+
+                                #region 加入 舊有  排名資料 xml， 本次沒有更新到的，要還原給它
+                                // 班
+                                XElement elmC = semesterScoreRankDictionary[sy][se]["class_rating"];
+
+                                foreach (XElement oldClassRank in elmC.Elements("Item"))
+                                {
+                                    using (XmlReader xmlReader = oldClassRank.CreateReader())
+                                    {
+                                        doc.Load(xmlReader);
+                                        classRating.AppendChild(doc.FirstChild);
+                                    }
+                                }
+
+                                // 科
+                                XElement elmD = semesterScoreRankDictionary[sy][se]["dept_rating"];
+
+                                foreach (XElement oldClassRank in elmD.Elements("Item"))
+                                {
+                                    using (XmlReader xmlReader = oldClassRank.CreateReader())
+                                    {
+                                        doc.Load(xmlReader);
+                                        classRating.AppendChild(doc.FirstChild);
+                                    }
+                                }
+
+                                // 校
+                                XElement elmY = semesterScoreRankDictionary[sy][se]["year_rating"];
+
+                                foreach (XElement oldClassRank in elmY.Elements("Item"))
+                                {
+                                    using (XmlReader xmlReader = oldClassRank.CreateReader())
+                                    {
+                                        doc.Load(xmlReader);
+                                        classRating.AppendChild(doc.FirstChild);
+                                    }
+                                }
+
+                                // 類別
+                                XElement elmG = semesterScoreRankDictionary[sy][se]["group_rating"];
+
+                                foreach (XElement oldClassRank in elmG.Element("Rating").Elements("Item"))
+                                {
+                                    using (XmlReader xmlReader = oldClassRank.CreateReader())
+                                    {
+                                        doc.Load(xmlReader);
+                                        classRating.AppendChild(doc.FirstChild);
+                                    }
+                                } 
+                                #endregion
+
                                 string updateSql = "update sems_subj_score set ";
                                 if (hasclassRating)
                                 {
@@ -1053,10 +1300,11 @@ namespace SmartSchool.Evaluation.ImportExport
                                     {
                                         updateSql += ",";
                                     }
-                                    if (clearClassRating)
-                                        updateSql += "class_rating=null";
-                                    else
-                                        updateSql += "class_rating='" + classRating.OuterXml + "'";
+                                    //if (clearClassRating)
+                                    //    updateSql += "class_rating=null";
+                                    //else
+                                    //    updateSql += "class_rating='" + classRating.OuterXml + "'";
+                                    updateSql += "class_rating='" + classRating.OuterXml + "'";
                                 }
                                 if (hasdeptRating)
                                 {
@@ -1064,10 +1312,11 @@ namespace SmartSchool.Evaluation.ImportExport
                                     {
                                         updateSql += ",";
                                     }
-                                    if (clearDeptRating)
-                                        updateSql += "dept_rating=null";
-                                    else
-                                        updateSql += "dept_rating='" + deptRating.OuterXml + "'";
+                                    //if (clearDeptRating)
+                                    //    updateSql += "dept_rating=null";
+                                    //else
+                                    //    updateSql += "dept_rating='" + deptRating.OuterXml + "'";
+                                    updateSql += "dept_rating='" + deptRating.OuterXml + "'";
                                 }
                                 if (hasschoolRating)
                                 {
@@ -1075,10 +1324,11 @@ namespace SmartSchool.Evaluation.ImportExport
                                     {
                                         updateSql += ",";
                                     }
-                                    if (clearSchoolRating)
-                                        updateSql += "year_rating=null";
-                                    else
-                                        updateSql += "year_rating='" + schoolRating.OuterXml + "'";
+                                    //if (clearSchoolRating)
+                                    //    updateSql += "year_rating=null";
+                                    //else
+                                    //    updateSql += "year_rating='" + schoolRating.OuterXml + "'";
+                                    updateSql += "year_rating='" + schoolRating.OuterXml + "'";
                                 }
 
 

@@ -456,10 +456,10 @@ namespace SmartSchool.Evaluation
                 sserx.SchoolYear = dr["school_year"].ToString();
                 sserx.Semester = dr["semester"].ToString();
                 sserx.GradeYear = dr["grade_year"].ToString();
-                sserx.ClassRankXML = dr["class_rating"].ToString();
-                sserx.DeptRankXML = dr["dept_rating"].ToString();
-                sserx.YearRankXML = dr["year_rating"].ToString();
-                sserx.GroupRankXML = dr["group_rating"].ToString();
+                sserx.ClassRankXML = XElement.Parse(dr["class_rating"].ToString());
+                sserx.DeptRankXML = XElement.Parse(dr["dept_rating"].ToString());
+                sserx.YearRankXML = XElement.Parse(dr["year_rating"].ToString());
+                sserx.GroupRankXML = XElement.Parse(dr["group_rating"].ToString());
                
                 _retValue[sid].Add(sserx);
             }
