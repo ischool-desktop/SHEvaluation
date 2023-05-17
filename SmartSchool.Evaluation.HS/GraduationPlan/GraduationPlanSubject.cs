@@ -21,8 +21,11 @@ namespace SmartSchool.Evaluation.GraduationPlan
         readonly private bool _NotIncludedInCredit;
         readonly private bool _NotIncludedInCalc;
 
+        private XmlElement _SubjectElement;
+
         internal GraduationPlanSubject(XmlElement subjectElement)
         {
+            _SubjectElement = subjectElement;
             _Category = subjectElement.GetAttribute("Category");
             _Credit = subjectElement.GetAttribute("Credit");
             _Domain = subjectElement.GetAttribute("Domain");
@@ -35,8 +38,8 @@ namespace SmartSchool.Evaluation.GraduationPlan
             _SubjectName = subjectElement.GetAttribute("SubjectName");
             _Entry = subjectElement.GetAttribute("Entry");
             bool b = false;
-            bool.TryParse(subjectElement.GetAttribute("NotIncludedInCredit"),out b);
-            _NotIncludedInCredit = b; 
+            bool.TryParse(subjectElement.GetAttribute("NotIncludedInCredit"), out b);
+            _NotIncludedInCredit = b;
             b = false;
             bool.TryParse(subjectElement.GetAttribute("NotIncludedInCalc"), out b);
             _NotIncludedInCalc = b;
@@ -55,5 +58,7 @@ namespace SmartSchool.Evaluation.GraduationPlan
         public string Entry { get { return _Entry; } }
         public bool NotIncludedInCredit { get { return _NotIncludedInCredit; } }
         public bool NotIncludedInCalc { get { return _NotIncludedInCalc; } }
+
+        internal XmlElement SubjectElement { get { return _SubjectElement; } }
     }
 }
