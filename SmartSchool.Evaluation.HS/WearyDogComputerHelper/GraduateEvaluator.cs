@@ -73,6 +73,14 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                 //同一科目級別不重複採計
                 bool filterSameSubject = true;
 
+                XmlDocument docCreditReport = new XmlDocument();
+                XmlElement evalReport = docCreditReport.CreateElement("GrandCheckReport");
+                docCreditReport.AppendChild(evalReport);
+
+
+                XmlDocument docGradCheck = new XmlDocument();
+                XmlElement evalResult = docGradCheck.CreateElement("GradCheck");
+
                 XmlElement rule = ScoreCalcRule.ScoreCalcRule.Instance.GetStudentScoreCalcRuleInfo(student.StudentID) == null ? null : ScoreCalcRule.ScoreCalcRule.Instance.GetStudentScoreCalcRuleInfo(student.StudentID).ScoreCalcRuleElement;
                 if (rule == null)
                 {
@@ -83,6 +91,18 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                 }
                 else
                 {
+                    evalReport.SetAttribute("科別", student.Department);
+                    evalReport.SetAttribute("班級", student.RefClass == null ? "" : student.RefClass.ClassName);
+                    evalReport.SetAttribute("座號", student.SeatNo);
+                    evalReport.SetAttribute("學號", student.StudentNumber);
+                    evalReport.SetAttribute("姓名", student.StudentName);
+                    evalReport.SetAttribute("成績計算規則", ScoreCalcRule.ScoreCalcRule.Instance.GetStudentScoreCalcRuleInfo(student.StudentID).Name);
+                    evalReport.SetAttribute("課程規劃表",
+                        GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID) == null
+                        ? ""
+                        : GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Name
+                        );
+
                     DSXmlHelper helper = new DSXmlHelper(rule);
                     crule.RefStudentID = student.StudentID;
                     #region 學期科目成績屬性採計方式
@@ -126,19 +146,42 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                     #region 畢業學分數
                     //學科應修總學分數
                     #region 應修總學分數
-                    if (rule.SelectSingleNode("畢業學分數/應修總學分數") != null)
                     {
-                        string creditstring = rule.SelectSingleNode("畢業學分數/應修總學分數").InnerText.Trim();
-                        if (creditstring != "")
+                        XmlElement reportEle = docCreditReport.CreateElement("項目");
+                        evalReport.AppendChild(reportEle);
+                        reportEle.SetAttribute("類型", "畢業學分數");
+                        reportEle.SetAttribute("規則", "應修總學分數");
+                        reportEle.SetAttribute("啟用", "否");
+                        reportEle.SetAttribute("設定值", "");
+                        if (rule.SelectSingleNode("畢業學分數/應修總學分數") != null)
                         {
-                            //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
-                            if (creditstring.Contains("%"))
+                            string creditstring = rule.SelectSingleNode("畢業學分數/應修總學分數").InnerText.Trim();
+                            if (creditstring != "")
                             {
                                 // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
                                 SubjectSet countedSubject = new SubjectSet();
                                 decimal count = 0;
                                 foreach (GraduationPlan.GraduationPlanSubject gplanSubject in GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Subjects)
                                 {
+                                    // 將科目寫入報告
+                                    XmlElement subjectElement = reportEle.SelectSingleNode("Subject[@Subject=\"" + gplanSubject.SubjectName.Trim() + "\" and @Level=\"" + gplanSubject.Level.Trim() + "\"]") as XmlElement;
+                                    if (subjectElement == null)
+                                    {
+                                        subjectElement = docCreditReport.CreateElement("Subject");
+                                        reportEle.AppendChild(subjectElement);
+                                        subjectElement.SetAttribute("Subject", gplanSubject.SubjectName.Trim());
+                                        subjectElement.SetAttribute("Level", gplanSubject.Level.Trim());
+                                        subjectElement.SetAttribute("Credit", gplanSubject.Credit);
+                                        subjectElement.SetAttribute("取得學分", "0");
+                                        subjectElement.SetAttribute("Status", "未修習");
+                                    }
+                                    XmlElement semesterElement = docCreditReport.CreateElement("Semester");
+                                    subjectElement.AppendChild(semesterElement);
+                                    semesterElement.SetAttribute("GradeYear", gplanSubject.SubjectElement.GetAttribute("GradeYear"));
+                                    semesterElement.SetAttribute("Semester", gplanSubject.SubjectElement.GetAttribute("Semester"));
+                                    semesterElement.SetAttribute("分組名稱", gplanSubject.SubjectElement.GetAttribute("分組名稱"));
+                                    semesterElement.SetAttribute("分組修課學分數", gplanSubject.SubjectElement.GetAttribute("分組修課學分數"));
+
                                     decimal credit = 0;
                                     SubjectName sn;
                                     if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
@@ -161,35 +204,68 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                         count += credit;
                                     }
                                 }
+                                //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
+                                if (creditstring.Contains("%"))
+                                {
 
-                                decimal totalCreditTemp = 0;
-                                decimal.TryParse(creditstring.Replace("%", ""), out totalCreditTemp);
-                                crule.TotalCredit = totalCreditTemp * count / 100m;
-                            }
-                            else
-                            {
-                                decimal totalCreditTemp = 0;
-                                decimal.TryParse(creditstring, out totalCreditTemp);
-                                crule.應修總學分數 = totalCreditTemp;
+                                    decimal totalCreditTemp = 0;
+                                    decimal.TryParse(creditstring.Replace("%", ""), out totalCreditTemp);
+                                    crule.應修總學分數 = totalCreditTemp * count / 100m;
+                                }
+                                else
+                                {
+                                    decimal totalCreditTemp = 0;
+                                    decimal.TryParse(creditstring, out totalCreditTemp);
+                                    crule.應修總學分數 = totalCreditTemp;
+                                }
+                                // 驗證標準寫入報表
+                                reportEle.SetAttribute("啟用", "是");
+                                reportEle.SetAttribute("設定值", creditstring);
+                                reportEle.SetAttribute("課規總學分數", "" + count);
+                                reportEle.SetAttribute("設定通過標準", "" + crule.應修總學分數);
                             }
                         }
+                        reportEle.SetAttribute("取得學分", "0");
                     }
                     #endregion
                     //學科累計總學分數
                     #region 總學分數
-                    if (rule.SelectSingleNode("畢業學分數/學科累計總學分數") != null)
                     {
-                        string creditstring = rule.SelectSingleNode("畢業學分數/學科累計總學分數").InnerText.Trim();
-                        if (creditstring != "")
+                        XmlElement reportEle = docCreditReport.CreateElement("項目");
+                        evalReport.AppendChild(reportEle);
+                        reportEle.SetAttribute("類型", "畢業學分數");
+                        reportEle.SetAttribute("規則", "學科累計總學分數");
+                        reportEle.SetAttribute("啟用", "否");
+                        reportEle.SetAttribute("設定值", "");
+                        if (rule.SelectSingleNode("畢業學分數/學科累計總學分數") != null)
                         {
-                            //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
-                            if (creditstring.Contains("%"))
+                            string creditstring = rule.SelectSingleNode("畢業學分數/學科累計總學分數").InnerText.Trim();
+                            if (creditstring != "")
                             {
                                 // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
                                 SubjectSet countedSubject = new SubjectSet();
                                 decimal count = 0;
                                 foreach (GraduationPlan.GraduationPlanSubject gplanSubject in GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Subjects)
                                 {
+                                    // 將科目寫入報告
+                                    XmlElement subjectElement = reportEle.SelectSingleNode("Subject[@Subject=\"" + gplanSubject.SubjectName.Trim() + "\" and @Level=\"" + gplanSubject.Level.Trim() + "\"]") as XmlElement;
+                                    if (subjectElement == null)
+                                    {
+                                        subjectElement = docCreditReport.CreateElement("Subject");
+                                        reportEle.AppendChild(subjectElement);
+                                        subjectElement.SetAttribute("Subject", gplanSubject.SubjectName.Trim());
+                                        subjectElement.SetAttribute("Level", gplanSubject.Level.Trim());
+                                        subjectElement.SetAttribute("Credit", gplanSubject.Credit);
+                                        subjectElement.SetAttribute("取得學分", "0");
+                                        subjectElement.SetAttribute("Status", "未修習");
+                                    }
+                                    XmlElement semesterElement = docCreditReport.CreateElement("Semester");
+                                    subjectElement.AppendChild(semesterElement);
+                                    semesterElement.SetAttribute("GradeYear", gplanSubject.SubjectElement.GetAttribute("GradeYear"));
+                                    semesterElement.SetAttribute("Semester", gplanSubject.SubjectElement.GetAttribute("Semester"));
+                                    semesterElement.SetAttribute("分組名稱", gplanSubject.SubjectElement.GetAttribute("分組名稱"));
+                                    semesterElement.SetAttribute("分組修課學分數", gplanSubject.SubjectElement.GetAttribute("分組修課學分數"));
+
                                     decimal credit = 0;
                                     SubjectName sn;
                                     if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
@@ -213,29 +289,43 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                     }
                                 }
 
-                                decimal totalCreditTemp = 0;
-                                decimal.TryParse(creditstring.Replace("%", ""), out totalCreditTemp);
-                                crule.TotalCredit = totalCreditTemp * count / 100m;
-                            }
-                            else
-                            {
-                                decimal totalCreditTemp = 0;
-                                decimal.TryParse(creditstring, out totalCreditTemp);
-                                crule.TotalCredit = totalCreditTemp;
+                                //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
+                                if (creditstring.Contains("%"))
+                                {
+                                    decimal totalCreditTemp = 0;
+                                    decimal.TryParse(creditstring.Replace("%", ""), out totalCreditTemp);
+                                    crule.TotalCredit = totalCreditTemp * count / 100m;
+                                }
+                                else
+                                {
+                                    decimal totalCreditTemp = 0;
+                                    decimal.TryParse(creditstring, out totalCreditTemp);
+                                    crule.TotalCredit = totalCreditTemp;
+                                }
+                                // 驗證標準寫入報表
+                                reportEle.SetAttribute("啟用", "是");
+                                reportEle.SetAttribute("設定值", creditstring);
+                                reportEle.SetAttribute("課規總學分數", "" + count);
+                                reportEle.SetAttribute("設定通過標準", "" + crule.TotalCredit);
                             }
                         }
+                        reportEle.SetAttribute("取得學分", "0");
                     }
                     #endregion
                     //必修學分數
                     #region 必修學分數
-                    if (rule.SelectSingleNode("畢業學分數/必修學分數") != null)
                     {
-                        string creditstring = rule.SelectSingleNode("畢業學分數/必修學分數").InnerText.Trim();
-
-                        if (creditstring != "")
+                        XmlElement reportEle = docCreditReport.CreateElement("項目");
+                        evalReport.AppendChild(reportEle);
+                        reportEle.SetAttribute("類型", "畢業學分數");
+                        reportEle.SetAttribute("規則", "必修學分數");
+                        reportEle.SetAttribute("啟用", "否");
+                        reportEle.SetAttribute("設定值", "");
+                        if (rule.SelectSingleNode("畢業學分數/必修學分數") != null)
                         {
-                            //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
-                            if (creditstring.Contains("%"))
+                            string creditstring = rule.SelectSingleNode("畢業學分數/必修學分數").InnerText.Trim();
+
+                            if (creditstring != "")
                             {
                                 // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
                                 SubjectSet countedSubject = new SubjectSet();
@@ -244,6 +334,25 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                 {
                                     if (gplanSubject.Required == "必修")
                                     {
+                                        // 將科目寫入報告
+                                        XmlElement subjectElement = reportEle.SelectSingleNode("Subject[@Subject=\"" + gplanSubject.SubjectName.Trim() + "\" and @Level=\"" + gplanSubject.Level.Trim() + "\"]") as XmlElement;
+                                        if (subjectElement == null)
+                                        {
+                                            subjectElement = docCreditReport.CreateElement("Subject");
+                                            reportEle.AppendChild(subjectElement);
+                                            subjectElement.SetAttribute("Subject", gplanSubject.SubjectName.Trim());
+                                            subjectElement.SetAttribute("Level", gplanSubject.Level.Trim());
+                                            subjectElement.SetAttribute("Credit", gplanSubject.Credit);
+                                            subjectElement.SetAttribute("取得學分", "0");
+                                            subjectElement.SetAttribute("Status", "未修習");
+                                        }
+                                        XmlElement semesterElement = docCreditReport.CreateElement("Semester");
+                                        subjectElement.AppendChild(semesterElement);
+                                        semesterElement.SetAttribute("GradeYear", gplanSubject.SubjectElement.GetAttribute("GradeYear"));
+                                        semesterElement.SetAttribute("Semester", gplanSubject.SubjectElement.GetAttribute("Semester"));
+                                        semesterElement.SetAttribute("分組名稱", gplanSubject.SubjectElement.GetAttribute("分組名稱"));
+                                        semesterElement.SetAttribute("分組修課學分數", gplanSubject.SubjectElement.GetAttribute("分組修課學分數"));
+
                                         decimal credit = 0;
                                         SubjectName sn;
                                         if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
@@ -267,28 +376,42 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                         }
                                     }
                                 }
-                                decimal requiredCreditTemp = 0;
-                                decimal.TryParse(creditstring.Replace("%", ""), out requiredCreditTemp);
-                                crule.RequiredCredit = requiredCreditTemp * count / 100m;
-                            }
-                            else
-                            {
-                                decimal requiredCreditTemp = 0;
-                                decimal.TryParse(creditstring, out requiredCreditTemp);
-                                crule.RequiredCredit = requiredCreditTemp;
+                                //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
+                                if (creditstring.Contains("%"))
+                                {
+                                    decimal requiredCreditTemp = 0;
+                                    decimal.TryParse(creditstring.Replace("%", ""), out requiredCreditTemp);
+                                    crule.RequiredCredit = requiredCreditTemp * count / 100m;
+                                }
+                                else
+                                {
+                                    decimal requiredCreditTemp = 0;
+                                    decimal.TryParse(creditstring, out requiredCreditTemp);
+                                    crule.RequiredCredit = requiredCreditTemp;
+                                }
+                                // 驗證標準寫入報表
+                                reportEle.SetAttribute("啟用", "是");
+                                reportEle.SetAttribute("設定值", creditstring);
+                                reportEle.SetAttribute("課規總學分數", "" + count);
+                                reportEle.SetAttribute("設定通過標準", "" + crule.RequiredCredit);
                             }
                         }
+                        reportEle.SetAttribute("取得學分", "0");
                     }
                     #endregion
                     //部訂必修學分數
                     #region 部訂必修學分數
-                    if (rule.SelectSingleNode("畢業學分數/部訂必修學分數") != null)
                     {
-                        string creditstring = rule.SelectSingleNode("畢業學分數/部訂必修學分數").InnerText.Trim();
-                        if (creditstring != "")
+                        XmlElement reportEle = docCreditReport.CreateElement("項目");
+                        evalReport.AppendChild(reportEle);
+                        reportEle.SetAttribute("類型", "畢業學分數");
+                        reportEle.SetAttribute("規則", "部訂必修學分數");
+                        reportEle.SetAttribute("啟用", "否");
+                        reportEle.SetAttribute("設定值", "");
+                        if (rule.SelectSingleNode("畢業學分數/部訂必修學分數") != null)
                         {
-                            //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
-                            if (creditstring.Contains("%"))
+                            string creditstring = rule.SelectSingleNode("畢業學分數/部訂必修學分數").InnerText.Trim();
+                            if (creditstring != "")
                             {
                                 // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
                                 SubjectSet countedSubject = new SubjectSet();
@@ -297,6 +420,25 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                 {
                                     if (gplanSubject.Required == "必修" && gplanSubject.RequiredBy == "部訂")
                                     {
+                                        // 將科目寫入報告
+                                        XmlElement subjectElement = reportEle.SelectSingleNode("Subject[@Subject=\"" + gplanSubject.SubjectName.Trim() + "\" and @Level=\"" + gplanSubject.Level.Trim() + "\"]") as XmlElement;
+                                        if (subjectElement == null)
+                                        {
+                                            subjectElement = docCreditReport.CreateElement("Subject");
+                                            reportEle.AppendChild(subjectElement);
+                                            subjectElement.SetAttribute("Subject", gplanSubject.SubjectName.Trim());
+                                            subjectElement.SetAttribute("Level", gplanSubject.Level.Trim());
+                                            subjectElement.SetAttribute("Credit", gplanSubject.Credit);
+                                            subjectElement.SetAttribute("取得學分", "0");
+                                            subjectElement.SetAttribute("Status", "未修習");
+                                        }
+                                        XmlElement semesterElement = docCreditReport.CreateElement("Semester");
+                                        subjectElement.AppendChild(semesterElement);
+                                        semesterElement.SetAttribute("GradeYear", gplanSubject.SubjectElement.GetAttribute("GradeYear"));
+                                        semesterElement.SetAttribute("Semester", gplanSubject.SubjectElement.GetAttribute("Semester"));
+                                        semesterElement.SetAttribute("分組名稱", gplanSubject.SubjectElement.GetAttribute("分組名稱"));
+                                        semesterElement.SetAttribute("分組修課學分數", gplanSubject.SubjectElement.GetAttribute("分組修課學分數"));
+
                                         decimal credit = 0;
                                         SubjectName sn;
                                         if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
@@ -320,28 +462,42 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                         }
                                     }
                                 }
-                                decimal eduRequiredCreditTemp = 0;
-                                decimal.TryParse(creditstring.Replace("%", ""), out eduRequiredCreditTemp);
-                                crule.EduRequiredCredit = eduRequiredCreditTemp * count / 100m;
-                            }
-                            else
-                            {
-                                decimal eduRequiredCreditTemp = 0;
-                                decimal.TryParse(creditstring, out eduRequiredCreditTemp);
-                                crule.EduRequiredCredit = eduRequiredCreditTemp;
+                                //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
+                                if (creditstring.Contains("%"))
+                                {
+                                    decimal eduRequiredCreditTemp = 0;
+                                    decimal.TryParse(creditstring.Replace("%", ""), out eduRequiredCreditTemp);
+                                    crule.EduRequiredCredit = eduRequiredCreditTemp * count / 100m;
+                                }
+                                else
+                                {
+                                    decimal eduRequiredCreditTemp = 0;
+                                    decimal.TryParse(creditstring, out eduRequiredCreditTemp);
+                                    crule.EduRequiredCredit = eduRequiredCreditTemp;
+                                }
+                                // 驗證標準寫入報表
+                                reportEle.SetAttribute("啟用", "是");
+                                reportEle.SetAttribute("設定值", creditstring);
+                                reportEle.SetAttribute("課規總學分數", "" + count);
+                                reportEle.SetAttribute("設定通過標準", "" + crule.EduRequiredCredit);
                             }
                         }
+                        reportEle.SetAttribute("取得學分", "0");
                     }
                     #endregion
                     //實習學分數
                     #region 實習學分數
-                    if (rule.SelectSingleNode("畢業學分數/實習學分數") != null)
                     {
-                        string creditstring = rule.SelectSingleNode("畢業學分數/實習學分數").InnerText.Trim();
-                        if (creditstring != "")
+                        XmlElement reportEle = docCreditReport.CreateElement("項目");
+                        evalReport.AppendChild(reportEle);
+                        reportEle.SetAttribute("類型", "畢業學分數");
+                        reportEle.SetAttribute("規則", "實習學分數");
+                        reportEle.SetAttribute("啟用", "否");
+                        reportEle.SetAttribute("設定值", "");
+                        if (rule.SelectSingleNode("畢業學分數/實習學分數") != null)
                         {
-                            //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
-                            if (creditstring.Contains("%"))
+                            string creditstring = rule.SelectSingleNode("畢業學分數/實習學分數").InnerText.Trim();
+                            if (creditstring != "")
                             {
                                 // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
                                 SubjectSet countedSubject = new SubjectSet();
@@ -350,6 +506,25 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                 {
                                     if (gplanSubject.Entry == "實習科目")
                                     {
+                                        // 將科目寫入報告
+                                        XmlElement subjectElement = reportEle.SelectSingleNode("Subject[@Subject=\"" + gplanSubject.SubjectName.Trim() + "\" and @Level=\"" + gplanSubject.Level.Trim() + "\"]") as XmlElement;
+                                        if (subjectElement == null)
+                                        {
+                                            subjectElement = docCreditReport.CreateElement("Subject");
+                                            reportEle.AppendChild(subjectElement);
+                                            subjectElement.SetAttribute("Subject", gplanSubject.SubjectName.Trim());
+                                            subjectElement.SetAttribute("Level", gplanSubject.Level.Trim());
+                                            subjectElement.SetAttribute("Credit", gplanSubject.Credit);
+                                            subjectElement.SetAttribute("取得學分", "0");
+                                            subjectElement.SetAttribute("Status", "未修習");
+                                        }
+                                        XmlElement semesterElement = docCreditReport.CreateElement("Semester");
+                                        subjectElement.AppendChild(semesterElement);
+                                        semesterElement.SetAttribute("GradeYear", gplanSubject.SubjectElement.GetAttribute("GradeYear"));
+                                        semesterElement.SetAttribute("Semester", gplanSubject.SubjectElement.GetAttribute("Semester"));
+                                        semesterElement.SetAttribute("分組名稱", gplanSubject.SubjectElement.GetAttribute("分組名稱"));
+                                        semesterElement.SetAttribute("分組修課學分數", gplanSubject.SubjectElement.GetAttribute("分組修課學分數"));
+
                                         decimal credit = 0;
                                         SubjectName sn;
                                         if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
@@ -373,28 +548,42 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                         }
                                     }
                                 }
-                                decimal physicalCreditTemp = 0;
-                                decimal.TryParse(creditstring.Replace("%", ""), out physicalCreditTemp);
-                                crule.PhysicalCredit = physicalCreditTemp * count / 100m;
-                            }
-                            else
-                            {
-                                decimal physicalCreditTemp = 0;
-                                decimal.TryParse(creditstring, out physicalCreditTemp);
-                                crule.PhysicalCredit = physicalCreditTemp;
+                                //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
+                                if (creditstring.Contains("%"))
+                                {
+                                    decimal physicalCreditTemp = 0;
+                                    decimal.TryParse(creditstring.Replace("%", ""), out physicalCreditTemp);
+                                    crule.PhysicalCredit = physicalCreditTemp * count / 100m;
+                                }
+                                else
+                                {
+                                    decimal physicalCreditTemp = 0;
+                                    decimal.TryParse(creditstring, out physicalCreditTemp);
+                                    crule.PhysicalCredit = physicalCreditTemp;
+                                }
+                                // 驗證標準寫入報表
+                                reportEle.SetAttribute("啟用", "是");
+                                reportEle.SetAttribute("設定值", creditstring);
+                                reportEle.SetAttribute("課規總學分數", "" + count);
+                                reportEle.SetAttribute("設定通過標準", "" + crule.PhysicalCredit);
                             }
                         }
+                        reportEle.SetAttribute("取得學分", "0");
                     }
                     #endregion
                     //選修學分數
                     #region 選修學分數
-                    if (rule.SelectSingleNode("畢業學分數/選修學分數") != null)
                     {
-                        string creditstring = rule.SelectSingleNode("畢業學分數/選修學分數").InnerText.Trim();
-                        if (creditstring != "")
+                        XmlElement reportEle = docCreditReport.CreateElement("項目");
+                        evalReport.AppendChild(reportEle);
+                        reportEle.SetAttribute("類型", "畢業學分數");
+                        reportEle.SetAttribute("規則", "選修學分數");
+                        reportEle.SetAttribute("啟用", "否");
+                        reportEle.SetAttribute("設定值", "");
+                        if (rule.SelectSingleNode("畢業學分數/選修學分數") != null)
                         {
-                            //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
-                            if (creditstring.Contains("%"))
+                            string creditstring = rule.SelectSingleNode("畢業學分數/選修學分數").InnerText.Trim();
+                            if (creditstring != "")
                             {
                                 // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
                                 SubjectSet countedSubject = new SubjectSet();
@@ -403,6 +592,25 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                 {
                                     if (gplanSubject.Required == "選修")
                                     {
+                                        // 將科目寫入報告
+                                        XmlElement subjectElement = reportEle.SelectSingleNode("Subject[@Subject=\"" + gplanSubject.SubjectName.Trim() + "\" and @Level=\"" + gplanSubject.Level.Trim() + "\"]") as XmlElement;
+                                        if (subjectElement == null)
+                                        {
+                                            subjectElement = docCreditReport.CreateElement("Subject");
+                                            reportEle.AppendChild(subjectElement);
+                                            subjectElement.SetAttribute("Subject", gplanSubject.SubjectName.Trim());
+                                            subjectElement.SetAttribute("Level", gplanSubject.Level.Trim());
+                                            subjectElement.SetAttribute("Credit", gplanSubject.Credit);
+                                            subjectElement.SetAttribute("取得學分", "0");
+                                            subjectElement.SetAttribute("Status", "未修習");
+                                        }
+                                        XmlElement semesterElement = docCreditReport.CreateElement("Semester");
+                                        subjectElement.AppendChild(semesterElement);
+                                        semesterElement.SetAttribute("GradeYear", gplanSubject.SubjectElement.GetAttribute("GradeYear"));
+                                        semesterElement.SetAttribute("Semester", gplanSubject.SubjectElement.GetAttribute("Semester"));
+                                        semesterElement.SetAttribute("分組名稱", gplanSubject.SubjectElement.GetAttribute("分組名稱"));
+                                        semesterElement.SetAttribute("分組修課學分數", gplanSubject.SubjectElement.GetAttribute("分組修課學分數"));
+
                                         decimal credit = 0;
                                         SubjectName sn;
                                         if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
@@ -426,28 +634,42 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                         }
                                     }
                                 }
-                                decimal choicedCreditTemp = 0;
-                                decimal.TryParse(creditstring.Replace("%", ""), out choicedCreditTemp);
-                                crule.ChoicedCredit = choicedCreditTemp * count / 100m;
-                            }
-                            else
-                            {
-                                decimal choicedCreditTemp = 0;
-                                decimal.TryParse(creditstring, out choicedCreditTemp);
-                                crule.ChoicedCredit = choicedCreditTemp;
+                                //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
+                                if (creditstring.Contains("%"))
+                                {
+                                    decimal choicedCreditTemp = 0;
+                                    decimal.TryParse(creditstring.Replace("%", ""), out choicedCreditTemp);
+                                    crule.ChoicedCredit = choicedCreditTemp * count / 100m;
+                                }
+                                else
+                                {
+                                    decimal choicedCreditTemp = 0;
+                                    decimal.TryParse(creditstring, out choicedCreditTemp);
+                                    crule.ChoicedCredit = choicedCreditTemp;
+                                }
+                                // 驗證標準寫入報表
+                                reportEle.SetAttribute("啟用", "是");
+                                reportEle.SetAttribute("設定值", creditstring);
+                                reportEle.SetAttribute("課規總學分數", "" + count);
+                                reportEle.SetAttribute("設定通過標準", "" + crule.ChoicedCredit);
                             }
                         }
+                        reportEle.SetAttribute("取得學分", "0");
                     }
                     #endregion
                     //校訂必修學分數
                     #region 校訂必修學分數
-                    if (rule.SelectSingleNode("畢業學分數/校訂必修學分數") != null)
                     {
-                        string creditstring = rule.SelectSingleNode("畢業學分數/校訂必修學分數").InnerText.Trim();
-                        if (creditstring != "")
+                        XmlElement reportEle = docCreditReport.CreateElement("項目");
+                        evalReport.AppendChild(reportEle);
+                        reportEle.SetAttribute("類型", "畢業學分數");
+                        reportEle.SetAttribute("規則", "校訂必修學分數");
+                        reportEle.SetAttribute("啟用", "否");
+                        reportEle.SetAttribute("設定值", "");
+                        if (rule.SelectSingleNode("畢業學分數/校訂必修學分數") != null)
                         {
-                            //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
-                            if (creditstring.Contains("%"))
+                            string creditstring = rule.SelectSingleNode("畢業學分數/校訂必修學分數").InnerText.Trim();
+                            if (creditstring != "")
                             {
                                 // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
                                 SubjectSet countedSubject = new SubjectSet();
@@ -456,6 +678,25 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                 {
                                     if (gplanSubject.Required == "必修" && gplanSubject.RequiredBy == "校訂")
                                     {
+                                        // 將科目寫入報告
+                                        XmlElement subjectElement = reportEle.SelectSingleNode("Subject[@Subject=\"" + gplanSubject.SubjectName.Trim() + "\" and @Level=\"" + gplanSubject.Level.Trim() + "\"]") as XmlElement;
+                                        if (subjectElement == null)
+                                        {
+                                            subjectElement = docCreditReport.CreateElement("Subject");
+                                            reportEle.AppendChild(subjectElement);
+                                            subjectElement.SetAttribute("Subject", gplanSubject.SubjectName.Trim());
+                                            subjectElement.SetAttribute("Level", gplanSubject.Level.Trim());
+                                            subjectElement.SetAttribute("Credit", gplanSubject.Credit);
+                                            subjectElement.SetAttribute("取得學分", "0");
+                                            subjectElement.SetAttribute("Status", "未修習");
+                                        }
+                                        XmlElement semesterElement = docCreditReport.CreateElement("Semester");
+                                        subjectElement.AppendChild(semesterElement);
+                                        semesterElement.SetAttribute("GradeYear", gplanSubject.SubjectElement.GetAttribute("GradeYear"));
+                                        semesterElement.SetAttribute("Semester", gplanSubject.SubjectElement.GetAttribute("Semester"));
+                                        semesterElement.SetAttribute("分組名稱", gplanSubject.SubjectElement.GetAttribute("分組名稱"));
+                                        semesterElement.SetAttribute("分組修課學分數", gplanSubject.SubjectElement.GetAttribute("分組修課學分數"));
+
                                         decimal credit = 0;
                                         SubjectName sn;
                                         if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
@@ -479,28 +720,42 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                         }
                                     }
                                 }
-                                decimal schoolRequiredCreditTemp = 0;
-                                decimal.TryParse(creditstring.Replace("%", ""), out schoolRequiredCreditTemp);
-                                crule.SchoolRequiredCredit = schoolRequiredCreditTemp * count / 100m;
-                            }
-                            else
-                            {
-                                decimal schoolRequiredCreditTemp = 0;
-                                decimal.TryParse(creditstring, out schoolRequiredCreditTemp);
-                                crule.SchoolRequiredCredit = schoolRequiredCreditTemp;
+                                //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
+                                if (creditstring.Contains("%"))
+                                {
+                                    decimal schoolRequiredCreditTemp = 0;
+                                    decimal.TryParse(creditstring.Replace("%", ""), out schoolRequiredCreditTemp);
+                                    crule.SchoolRequiredCredit = schoolRequiredCreditTemp * count / 100m;
+                                }
+                                else
+                                {
+                                    decimal schoolRequiredCreditTemp = 0;
+                                    decimal.TryParse(creditstring, out schoolRequiredCreditTemp);
+                                    crule.SchoolRequiredCredit = schoolRequiredCreditTemp;
+                                }
+                                // 驗證標準寫入報表
+                                reportEle.SetAttribute("啟用", "是");
+                                reportEle.SetAttribute("設定值", creditstring);
+                                reportEle.SetAttribute("課規總學分數", "" + count);
+                                reportEle.SetAttribute("設定通過標準", "" + crule.SchoolRequiredCredit);
                             }
                         }
+                        reportEle.SetAttribute("取得學分", "0");
                     }
                     #endregion
                     //應修專業及實習總學分數
                     #region 應修專業及實習總學分數
-                    if (rule.SelectSingleNode("畢業學分數/應修專業及實習總學分數") != null)
                     {
-                        string creditstring = rule.SelectSingleNode("畢業學分數/應修專業及實習總學分數").InnerText.Trim();
-                        if (creditstring != "")
+                        XmlElement reportEle = docCreditReport.CreateElement("項目");
+                        evalReport.AppendChild(reportEle);
+                        reportEle.SetAttribute("類型", "畢業學分數");
+                        reportEle.SetAttribute("規則", "應修專業及實習總學分數");
+                        reportEle.SetAttribute("啟用", "否");
+                        reportEle.SetAttribute("設定值", "");
+                        if (rule.SelectSingleNode("畢業學分數/應修專業及實習總學分數") != null)
                         {
-                            //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
-                            if (creditstring.Contains("%"))
+                            string creditstring = rule.SelectSingleNode("畢業學分數/應修專業及實習總學分數").InnerText.Trim();
+                            if (creditstring != "")
                             {
                                 // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
                                 SubjectSet countedSubject = new SubjectSet();
@@ -509,6 +764,25 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                 {
                                     if (gplanSubject.Entry == "實習科目" || gplanSubject.Entry == "專業科目")
                                     {
+                                        // 將科目寫入報告
+                                        XmlElement subjectElement = reportEle.SelectSingleNode("Subject[@Subject=\"" + gplanSubject.SubjectName.Trim() + "\" and @Level=\"" + gplanSubject.Level.Trim() + "\"]") as XmlElement;
+                                        if (subjectElement == null)
+                                        {
+                                            subjectElement = docCreditReport.CreateElement("Subject");
+                                            reportEle.AppendChild(subjectElement);
+                                            subjectElement.SetAttribute("Subject", gplanSubject.SubjectName.Trim());
+                                            subjectElement.SetAttribute("Level", gplanSubject.Level.Trim());
+                                            subjectElement.SetAttribute("Credit", gplanSubject.Credit);
+                                            subjectElement.SetAttribute("取得學分", "0");
+                                            subjectElement.SetAttribute("Status", "未修習");
+                                        }
+                                        XmlElement semesterElement = docCreditReport.CreateElement("Semester");
+                                        subjectElement.AppendChild(semesterElement);
+                                        semesterElement.SetAttribute("GradeYear", gplanSubject.SubjectElement.GetAttribute("GradeYear"));
+                                        semesterElement.SetAttribute("Semester", gplanSubject.SubjectElement.GetAttribute("Semester"));
+                                        semesterElement.SetAttribute("分組名稱", gplanSubject.SubjectElement.GetAttribute("分組名稱"));
+                                        semesterElement.SetAttribute("分組修課學分數", gplanSubject.SubjectElement.GetAttribute("分組修課學分數"));
+
                                         decimal credit = 0;
                                         SubjectName sn;
                                         if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
@@ -532,28 +806,42 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                         }
                                     }
                                 }
-                                decimal tryParseDecimal = 0;
-                                decimal.TryParse(creditstring.Replace("%", ""), out tryParseDecimal);
-                                crule.專業及實習總學分數 = tryParseDecimal * count / 100m;
-                            }
-                            else
-                            {
-                                decimal tryParseDecimal = 0;
-                                decimal.TryParse(creditstring, out tryParseDecimal);
-                                crule.應修專業及實習總學分數 = tryParseDecimal;
+                                //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
+                                if (creditstring.Contains("%"))
+                                {
+                                    decimal tryParseDecimal = 0;
+                                    decimal.TryParse(creditstring.Replace("%", ""), out tryParseDecimal);
+                                    crule.應修專業及實習總學分數 = tryParseDecimal * count / 100m;
+                                }
+                                else
+                                {
+                                    decimal tryParseDecimal = 0;
+                                    decimal.TryParse(creditstring, out tryParseDecimal);
+                                    crule.應修專業及實習總學分數 = tryParseDecimal;
+                                }
+                                // 驗證標準寫入報表
+                                reportEle.SetAttribute("啟用", "是");
+                                reportEle.SetAttribute("設定值", creditstring);
+                                reportEle.SetAttribute("課規總學分數", "" + count);
+                                reportEle.SetAttribute("設定通過標準", "" + crule.應修專業及實習總學分數);
                             }
                         }
+                        reportEle.SetAttribute("取得學分", "0");
                     }
                     #endregion
                     //專業及實習總學分數
                     #region 專業及實習總學分數
-                    if (rule.SelectSingleNode("畢業學分數/專業及實習總學分數") != null)
                     {
-                        string creditstring = rule.SelectSingleNode("畢業學分數/專業及實習總學分數").InnerText.Trim();
-                        if (creditstring != "")
+                        XmlElement reportEle = docCreditReport.CreateElement("項目");
+                        evalReport.AppendChild(reportEle);
+                        reportEle.SetAttribute("類型", "畢業學分數");
+                        reportEle.SetAttribute("規則", "專業及實習總學分數");
+                        reportEle.SetAttribute("啟用", "否");
+                        reportEle.SetAttribute("設定值", "");
+                        if (rule.SelectSingleNode("畢業學分數/專業及實習總學分數") != null)
                         {
-                            //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
-                            if (creditstring.Contains("%"))
+                            string creditstring = rule.SelectSingleNode("畢業學分數/專業及實習總學分數").InnerText.Trim();
+                            if (creditstring != "")
                             {
                                 // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
                                 SubjectSet countedSubject = new SubjectSet();
@@ -562,6 +850,25 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                 {
                                     if (gplanSubject.Entry == "實習科目" || gplanSubject.Entry == "專業科目")
                                     {
+                                        // 將科目寫入報告
+                                        XmlElement subjectElement = reportEle.SelectSingleNode("Subject[@Subject=\"" + gplanSubject.SubjectName.Trim() + "\" and @Level=\"" + gplanSubject.Level.Trim() + "\"]") as XmlElement;
+                                        if (subjectElement == null)
+                                        {
+                                            subjectElement = docCreditReport.CreateElement("Subject");
+                                            reportEle.AppendChild(subjectElement);
+                                            subjectElement.SetAttribute("Subject", gplanSubject.SubjectName.Trim());
+                                            subjectElement.SetAttribute("Level", gplanSubject.Level.Trim());
+                                            subjectElement.SetAttribute("Credit", gplanSubject.Credit);
+                                            subjectElement.SetAttribute("取得學分", "0");
+                                            subjectElement.SetAttribute("Status", "未修習");
+                                        }
+                                        XmlElement semesterElement = docCreditReport.CreateElement("Semester");
+                                        subjectElement.AppendChild(semesterElement);
+                                        semesterElement.SetAttribute("GradeYear", gplanSubject.SubjectElement.GetAttribute("GradeYear"));
+                                        semesterElement.SetAttribute("Semester", gplanSubject.SubjectElement.GetAttribute("Semester"));
+                                        semesterElement.SetAttribute("分組名稱", gplanSubject.SubjectElement.GetAttribute("分組名稱"));
+                                        semesterElement.SetAttribute("分組修課學分數", gplanSubject.SubjectElement.GetAttribute("分組修課學分數"));
+
                                         decimal credit = 0;
                                         SubjectName sn;
                                         if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
@@ -585,17 +892,27 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                         }
                                     }
                                 }
-                                decimal tryParseDecimal = 0;
-                                decimal.TryParse(creditstring.Replace("%", ""), out tryParseDecimal);
-                                crule.專業及實習總學分數 = tryParseDecimal * count / 100m;
-                            }
-                            else
-                            {
-                                decimal tryParseDecimal = 0;
-                                decimal.TryParse(creditstring, out tryParseDecimal);
-                                crule.專業及實習總學分數 = tryParseDecimal;
+                                //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
+                                if (creditstring.Contains("%"))
+                                {
+                                    decimal tryParseDecimal = 0;
+                                    decimal.TryParse(creditstring.Replace("%", ""), out tryParseDecimal);
+                                    crule.專業及實習總學分數 = tryParseDecimal * count / 100m;
+                                }
+                                else
+                                {
+                                    decimal tryParseDecimal = 0;
+                                    decimal.TryParse(creditstring, out tryParseDecimal);
+                                    crule.專業及實習總學分數 = tryParseDecimal;
+                                }
+                                // 驗證標準寫入報表
+                                reportEle.SetAttribute("啟用", "是");
+                                reportEle.SetAttribute("設定值", creditstring);
+                                reportEle.SetAttribute("課規總學分數", "" + count);
+                                reportEle.SetAttribute("設定通過標準", "" + crule.專業及實習總學分數);
                             }
                         }
+                        reportEle.SetAttribute("取得學分", "0");
                     }
                     #endregion
                     //同一科目級別不重複採計
@@ -698,8 +1015,6 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                     #endregion
                 }
 
-                XmlDocument doc = new XmlDocument();
-                XmlElement evalResult = doc.CreateElement("GradCheck");
 
                 if (isDataReasonable)
                 {
@@ -747,7 +1062,7 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                             //如果有一個科目沒修，就是修課不完全。
                             if (!requiredList.Contains(each))
                             {
-                                XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                                XmlElement unPasselement = docGradCheck.CreateElement("UnPassReson");
                                 unPasselement.InnerText = "未修習所有必修課程";
                                 evalResult.AppendChild(unPasselement);
                                 break;
@@ -771,6 +1086,7 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
 
                     SubjectSet attendSubjects = new SubjectSet();
                     SubjectSet passedSubjects = new SubjectSet();
+                    int maxGradeYear = 0, maxSemester = 0;
                     foreach (SemesterSubjectScoreInfo subjectScore in subjectsByStudent)
                     {
                         #region 依據設定設定畢業採計各項屬性
@@ -829,17 +1145,17 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                         #endregion
 
                         #region 計算各項取得學分數
+                        //不計學分不用算
+                        if (subjectScore.Detail.GetAttribute("畢業採計-不計學分") == "是")
+                        {
+                            subjectScore.Detail.SetAttribute("畢業採計-學分數", "0");
+                            subjectScore.Detail.SetAttribute("畢業採計-說明", "不計學分");
+                            continue;
+                        }
                         if (subjectScore.Pass)
                         {
-                            //不計學分不用算
-                            if (subjectScore.Detail.GetAttribute("畢業採計-不計學分") == "是")
-                            {
-                                subjectScore.Detail.SetAttribute("畢業採計-學分數", "0");
-                                subjectScore.Detail.SetAttribute("畢業採計-說明", "不計學分");
-                                continue;
-                            }
-
                             bool isCount = true;
+                            decimal credit = 0;
                             if (filterSameSubject)
                             {
                                 SubjectName sn = new SubjectName(subjectScore.Subject.Trim(), subjectScore.Level.Trim());
@@ -854,7 +1170,6 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                             }
                             if (isCount)
                             {
-                                decimal credit = 0;
                                 decimal.TryParse(subjectScore.Detail.GetAttribute("畢業採計-學分數"), out credit);
                                 get總學分數 += credit;
                                 if (subjectScore.Detail.GetAttribute("畢業採計-必選修") == "必修" && subjectScore.Detail.GetAttribute("畢業採計-校部訂") == "校訂")
@@ -870,70 +1185,170 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                 if (subjectScore.Detail.GetAttribute("畢業採計-必選修") == "必修")
                                     get必修學分數 += credit;
                             }
+                            // 寫入報告
+                            foreach (XmlElement subjectElement in evalReport.SelectNodes("項目/Subject[@Subject=\"" + subjectScore.Subject.Trim() + "\" and @Level=\"" + subjectScore.Level.Trim() + "\"]"))
+                            {
+                                subjectElement.SetAttribute("Status", "已取得");
+                                subjectElement.SetAttribute("取得學分", "" + (decimal.Parse(subjectElement.GetAttribute("取得學分")) + credit));
+                            }
                         }
                         else
                         {
                             subjectScore.Detail.SetAttribute("畢業採計-學分數", "0");
                             subjectScore.Detail.SetAttribute("畢業採計-說明", "未取得學分");
+                            // 寫入報告
+                            foreach (XmlElement subjectElement in evalReport.SelectNodes("項目/Subject[@Subject=\"" + subjectScore.Subject.Trim() + "\" and @Level=\"" + subjectScore.Level.Trim() + "\"]"))
+                            {
+                                if (subjectScore.Detail.GetAttribute("是否補修成績") == "是" && subjectScore.Detail.GetAttribute("補修學年度") == "" && subjectScore.Detail.GetAttribute("補修學期") == "")
+                                    subjectElement.SetAttribute("Status", "可補休");
+                                else
+                                    subjectElement.SetAttribute("Status", "可重休");
+                            }
                         }
                         #endregion
+
+                        #region 計算有成績的最大年級
+                        if (subjectScore.GradeYear > maxGradeYear)
+                        {
+                            maxGradeYear = subjectScore.GradeYear;
+                            maxSemester = subjectScore.Semester;
+                        }
+                        else if (subjectScore.GradeYear == maxGradeYear && subjectScore.Semester > maxSemester)
+                        {
+                            maxSemester = subjectScore.Semester;
+                        }
+                        #endregion
+                        // 畢業採計-說明 增列科目屬性來源
                         if (useGPlan)
                             subjectScore.Detail.SetAttribute("畢業採計-說明", (subjectScore.Detail.GetAttribute("畢業採計-說明") == "" ? "" : (subjectScore.Detail.GetAttribute("畢業採計-說明") + "\n")) + "以課程規劃表(" + GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Name + ")為主");
                         else
                             subjectScore.Detail.SetAttribute("畢業採計-說明", (subjectScore.Detail.GetAttribute("畢業採計-說明") == "" ? "" : (subjectScore.Detail.GetAttribute("畢業採計-說明") + "\n")) + "直接使用成績內容");
                     }
 
+                    #region 計算各項畢業學分數檢查報告
+                    foreach (XmlElement checkRoleElement in evalReport.SelectNodes("項目"))
+                    {
+                        decimal comeAfterCredits = 0;
+                        decimal reStudyCredits = 0;
+                        #region 標註未來會開設的課程狀態 & 計算尚未開設的學分總數 & 可重補修的學分總數
+                        {
+                            List<string> checkList = new List<string>();
+                            foreach (XmlElement subjectElement in checkRoleElement.SelectNodes("Subject"))
+                            {
+                                if (subjectElement.GetAttribute("Status") == "未修習")
+                                {
+                                    bool comeAfter = false;
+                                    foreach (XmlElement semesterElemest in subjectElement.SelectNodes("Semester"))
+                                    {
+                                        int tryParseGradeYear = 0, tryParseSemester = 0;
+                                        int.TryParse(semesterElemest.GetAttribute("GradeYear"), out tryParseGradeYear);
+                                        int.TryParse(semesterElemest.GetAttribute("Semester"), out tryParseSemester);
+                                        if (
+                                            tryParseGradeYear > maxGradeYear
+                                            || (tryParseGradeYear == maxGradeYear && tryParseSemester > maxSemester)
+                                            )
+                                        {
+                                            comeAfter = true;
+                                            if (semesterElemest.GetAttribute("分組名稱") == "")
+                                                comeAfterCredits += decimal.Parse(subjectElement.GetAttribute("Credit"));
+                                            else
+                                            {
+                                                string checkKey = "" + semesterElemest.GetAttribute("分組名稱") + "_" + (tryParseGradeYear * 2 + tryParseSemester);
+                                                if (!checkList.Contains(checkKey))
+                                                {
+                                                    checkList.Add(checkKey);
+                                                    comeAfterCredits += decimal.Parse(semesterElemest.GetAttribute("分組修課學分數"));
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if (comeAfter)
+                                        subjectElement.SetAttribute("Status", "尚未開課");
+                                }
+                                if (subjectElement.GetAttribute("Status") == "可重休" || subjectElement.GetAttribute("Status") == "可補休")
+                                {
+                                    reStudyCredits += decimal.Parse(subjectElement.GetAttribute("Credit"));
+                                }
+                            }
+                        }
+                        #endregion
+                        #region 評估通過差異值
+                        decimal currentCredit = 0;
+                        switch (checkRoleElement.GetAttribute("規則"))
+                        {
+                            case "應修總學分數": currentCredit = get已修總學分數; break;
+                            case "應修專業及實習總學分數": currentCredit = get已修專業學分數 + get已修實習學分數; break;
+                            case "學科累計總學分數": currentCredit = get總學分數; break;
+                            case "必修學分數": currentCredit = get必修學分數; break;
+                            case "選修學分數": currentCredit = get選修學分數; break;
+                            case "部訂必修學分數": currentCredit = get部訂必修學分數; break;
+                            case "校訂必修學分數": currentCredit = get校訂必修學分數; break;
+                            case "實習學分數": currentCredit = get實習學分數; break;
+                            case "專業及實習總學分數": currentCredit = get專業學分數 + get實習學分數; break;
+                        }
+                        checkRoleElement.SetAttribute("取得學分", "" + currentCredit);
+                        checkRoleElement.SetAttribute("可重補修學分", "" + reStudyCredits);
+                        checkRoleElement.SetAttribute("尚未開課學分數", "" + comeAfterCredits);
+                        decimal tryParseLimit = 0;
+                        if (decimal.TryParse(checkRoleElement.GetAttribute("設定通過標準"), out tryParseLimit))
+                        {
+                            checkRoleElement.SetAttribute("學分數差額", "" + (currentCredit + comeAfterCredits - tryParseLimit));
+                        }
+                        #endregion
+                    }
+                    #endregion
+
                     if (get已修總學分數 < crule.應修總學分數)
                     {
-                        XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                        XmlElement unPasselement = docGradCheck.CreateElement("UnPassReson");
                         unPasselement.InnerText = "應修學分數不足";
                         evalResult.AppendChild(unPasselement);
                     }
                     if ((get已修專業學分數 + get已修實習學分數) < crule.應修專業及實習總學分數)
                     {
-                        XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                        XmlElement unPasselement = docGradCheck.CreateElement("UnPassReson");
                         unPasselement.InnerText = "應修專業及實習總學分數不足";
                         evalResult.AppendChild(unPasselement);
                     }
                     if (get總學分數 < crule.TotalCredit)
                     {
-                        XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                        XmlElement unPasselement = docGradCheck.CreateElement("UnPassReson");
                         unPasselement.InnerText = "總學分數不足";
                         evalResult.AppendChild(unPasselement);
                     }
                     if (get必修學分數 < crule.RequiredCredit)
                     {
-                        XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                        XmlElement unPasselement = docGradCheck.CreateElement("UnPassReson");
                         unPasselement.InnerText = "必修學分數不足";
                         evalResult.AppendChild(unPasselement);
                     }
                     if (get選修學分數 < crule.ChoicedCredit)
                     {
-                        XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                        XmlElement unPasselement = docGradCheck.CreateElement("UnPassReson");
                         unPasselement.InnerText = "選修學分數不足";
                         evalResult.AppendChild(unPasselement);
                     }
                     if (get部訂必修學分數 < crule.EduRequiredCredit)
                     {
-                        XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                        XmlElement unPasselement = docGradCheck.CreateElement("UnPassReson");
                         unPasselement.InnerText = "部訂必修學分數不足";
                         evalResult.AppendChild(unPasselement);
                     }
                     if (get校訂必修學分數 < crule.SchoolRequiredCredit)
                     {
-                        XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                        XmlElement unPasselement = docGradCheck.CreateElement("UnPassReson");
                         unPasselement.InnerText = "校訂必修學分數不足";
                         evalResult.AppendChild(unPasselement);
                     }
                     if (get實習學分數 < crule.PhysicalCredit)
                     {
-                        XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                        XmlElement unPasselement = docGradCheck.CreateElement("UnPassReson");
                         unPasselement.InnerText = "實習學分數不足";
                         evalResult.AppendChild(unPasselement);
                     }
                     if ((get專業學分數 + get實習學分數) < crule.專業及實習總學分數)
                     {
-                        XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                        XmlElement unPasselement = docGradCheck.CreateElement("UnPassReson");
                         unPasselement.InnerText = "專業及實習總學分數不足";
                         evalResult.AppendChild(unPasselement);
                     }
@@ -1022,14 +1437,14 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
 
                             if (passCredits < passLimit)
                             {
-                                XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                                XmlElement unPasselement = docGradCheck.CreateElement("UnPassReson");
                                 unPasselement.InnerText = "未達" + subjectTable.Name + "取得學分標準";
                                 evalResult.AppendChild(unPasselement);
                             }
 
                             if (attendCredits < attendLimit)
                             {
-                                XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                                XmlElement unPasselement = docGradCheck.CreateElement("UnPassReson");
                                 unPasselement.InnerText = "未達" + subjectTable.Name + "應修學分標準";
                                 evalResult.AppendChild(unPasselement);
                             }
@@ -1060,13 +1475,13 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                         {
                             if (passGrades[gradeYear] == null)
                             {
-                                XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                                XmlElement unPasselement = docGradCheck.CreateElement("UnPassReson");
                                 unPasselement.InnerText = "缺少" + gradeYear + "年級學年學業分項成績";
                                 evalResult.AppendChild(unPasselement);
                             }
                             else if (!passGrades[gradeYear].Value)
                             {
-                                XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                                XmlElement unPasselement = docGradCheck.CreateElement("UnPassReson");
                                 unPasselement.InnerText = "" + gradeYear + "年級學年學業分項成績不及格";
                                 evalResult.AppendChild(unPasselement);
                             }
@@ -1130,14 +1545,14 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                             //如果滿三大過
                             if (StudentDemeritCount <= -MaxDemeritC)
                             {
-                                XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                                XmlElement unPasselement = docGradCheck.CreateElement("UnPassReson");
                                 unPasselement.InnerText = "功過相抵滿三大過";
                                 evalResult.AppendChild(unPasselement);
                             }
                         }
                         else
                         {
-                            XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                            XmlElement unPasselement = docGradCheck.CreateElement("UnPassReson");
                             unPasselement.InnerText = "沒有設定功過換算表";
                             evalResult.AppendChild(unPasselement);
                         }
@@ -1160,6 +1575,11 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                 if (student.Fields.ContainsKey("GradCheck"))
                     student.Fields.Remove("GradCheck");
                 student.Fields.Add("GradCheck", evalResult);
+
+                //將畢業判斷報告加到學生身上
+                if (student.Fields.ContainsKey("GrandCheckReport"))
+                    student.Fields.Remove("GrandCheckReport");
+                student.Fields.Add("GrandCheckReport", evalReport);
 
             }
             #endregion

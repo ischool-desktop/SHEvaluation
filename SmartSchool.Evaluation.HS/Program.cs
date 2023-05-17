@@ -39,6 +39,64 @@ namespace SmartSchool.Evaluation
             SmartSchool.Evaluation.GraduationPlan.GraduationPlan.CreateInstance();
             SmartSchool.Evaluation.ScoreCalcRule.ScoreCalcRule.CreateInstance();
 
+
+            {
+                RibbonBarButton btn = K12.Presentation.NLDPanels.Student.RibbonBarItems["資料統計"]["畢業驗證報告"];
+                btn.Enable = false;
+                K12.Presentation.NLDPanels.Student.SelectedSourceChanged += delegate
+                {
+                    btn.Enable = K12.Presentation.NLDPanels.Student.SelectedSource.Count == 1;
+                };
+                btn.Click += delegate
+                {
+                    Customization.Data.AccessHelper accessHelper = new Customization.Data.AccessHelper();
+                    StudentRecord studentRecord = accessHelper.StudentHelper.GetStudent(K12.Presentation.NLDPanels.Student.SelectedSource[0]);
+                    new WearyDogComputer().FillStudentGradCheck(accessHelper, new List<StudentRecord>() { studentRecord });
+                    
+                    string path = System.IO.Path.Combine(Application.StartupPath, "Reports");
+                    if (!Directory.Exists(path))
+                        Directory.CreateDirectory(path);
+                    path = System.IO.Path.Combine(path, "畢業驗證報告.xml");
+
+                    if (File.Exists(path))
+                    {
+                        bool needCount = true;
+                        try
+                        {
+                            File.Delete(path);
+                            needCount = false;
+                        }
+                        catch { }
+                        int i = 1;
+                        while (needCount)
+                        {
+                            string newPath = System.IO.Path.GetDirectoryName(path) + "\\" + System.IO.Path.GetFileNameWithoutExtension(path) + (i++) + System.IO.Path.GetExtension(path);
+                            if (!File.Exists(newPath))
+                            {
+                                path = newPath;
+                                break;
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    File.Delete(newPath);
+                                    path = newPath;
+                                    break;
+                                }
+                                catch { }
+                            }
+                        }
+                    }
+
+                    XmlElement xmlElement = studentRecord.Fields["GrandCheckReport"] as XmlElement;
+                    xmlElement.OwnerDocument.Save(path);
+
+                    System.Diagnostics.Process.Start(path);
+                };
+            }
+
+
             RibbonBarButton button = MotherForm.RibbonBarItems["教務作業", "基本設定"]["設定"];
             button.Enable = CurrentUser.Acl["Button0830"].Executable;
             button["成績計算規則"].Click += delegate
