@@ -594,8 +594,6 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                     SubjectSet PassedSubjects = new SubjectSet();
                     foreach (SemesterSubjectScoreInfo subjectScore in subjectsByStudent)
                     {
-                        //if (subjectScore.Pass)
-                        //{
                         if (useGPlan)
                         {
                             #region 從課程規劃表取得這個科目的相關屬性
@@ -608,52 +606,6 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                             subjectScore.Detail.SetAttribute("畢業採計-必選修", gPlanSubject.Required);
                             subjectScore.Detail.SetAttribute("畢業採計-校部訂", gPlanSubject.RequiredBy);
                             subjectScore.Detail.SetAttribute("畢業採計-不計學分", gPlanSubject.NotIncludedInCredit ? "是" : "否");
-                            if (subjectScore.Pass)
-                            {
-                                //不計學分不用算
-                                if (gPlanSubject.NotIncludedInCredit)
-                                {
-                                    subjectScore.Detail.SetAttribute("畢業採計-學分數", "0");
-                                    subjectScore.Detail.SetAttribute("畢業採計-說明", "不計學分");
-                                    continue;
-                                }
-
-                                bool Uncounted = true;
-                                if (filterSameSubject)
-                                {
-                                    SubjectName sn = new SubjectName(gPlanSubject.SubjectName.Trim(), gPlanSubject.Level.Trim());
-                                    if (PassedSubjects.Contains(sn))
-                                    {
-                                        subjectScore.Detail.SetAttribute("畢業採計-學分數", "0");
-                                        subjectScore.Detail.SetAttribute("畢業採計-說明", "同科目級別重複取得學分數");
-                                        Uncounted = false;
-                                    }
-                                    else
-                                        PassedSubjects.Add(sn);
-                                }
-                                if (Uncounted)
-                                {
-                                    get總學分數 += credit;
-                                    if (gPlanSubject.Required == "必修" && gPlanSubject.RequiredBy == "校訂")
-                                        get校訂必修學分數 += credit;
-                                    if (gPlanSubject.Required == "選修")
-                                        get選修學分數 += credit;
-                                    if (gPlanSubject.Entry == "實習科目")
-                                        get實習學分數 += credit;
-                                    if (gPlanSubject.Entry == "專業科目")
-                                        get專業學分數 += credit;
-                                    if (gPlanSubject.Required == "必修" && gPlanSubject.RequiredBy == "部訂")
-                                        get部訂必修學分數 += credit;
-                                    if (gPlanSubject.Required == "必修")
-                                        get必修學分數 += credit;
-                                }
-                            }
-                            else
-                            {
-                                subjectScore.Detail.SetAttribute("畢業採計-學分數", "0");
-                                subjectScore.Detail.SetAttribute("畢業採計-說明", "未取得學分");
-                            }
-                            subjectScore.Detail.SetAttribute("畢業採計-說明", (subjectScore.Detail.GetAttribute("畢業採計-說明") == "" ? "" : (subjectScore.Detail.GetAttribute("畢業採計-說明") + "\n")) + "以課程規劃表(" + GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Name + ")為主");
                             #endregion
                         }
                         else
@@ -664,54 +616,59 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                             subjectScore.Detail.SetAttribute("畢業採計-必選修", subjectScore.Require ? "必修" : "選修");
                             subjectScore.Detail.SetAttribute("畢業採計-校部訂", subjectScore.Detail.GetAttribute("修課校部訂"));
                             subjectScore.Detail.SetAttribute("畢業採計-不計學分", subjectScore.Detail.GetAttribute("不計學分"));
-                            if (subjectScore.Pass)
-                            {
-                                //不計學分不用算
-                                if (subjectScore.Detail.GetAttribute("不計學分") == "是")
-                                {
-                                    subjectScore.Detail.SetAttribute("畢業採計-學分數", "0");
-                                    subjectScore.Detail.SetAttribute("畢業採計-說明", "不計學分");
-                                    continue;
-                                }
-                                bool Uncounted = true;
-                                if (filterSameSubject)
-                                {
-                                    SubjectName sn = new SubjectName(subjectScore.Subject.Trim(), subjectScore.Level.Trim());
-                                    if (PassedSubjects.Contains(sn))
-                                    {
-                                        subjectScore.Detail.SetAttribute("畢業採計-學分數", "0");
-                                        subjectScore.Detail.SetAttribute("畢業採計-說明", "同科目級別重複取得學分數");
-                                        Uncounted = false;
-                                    }
-                                    else
-                                        PassedSubjects.Add(sn);
-                                }
-                                if (Uncounted)
-                                {
-                                    get總學分數 += subjectScore.CreditDec();
-                                    if (subjectScore.Require && subjectScore.Detail.GetAttribute("修課校部訂") == "校訂")
-                                        get校訂必修學分數 += subjectScore.CreditDec();
-                                    if (!subjectScore.Require)
-                                        get選修學分數 += subjectScore.CreditDec();
-                                    if (subjectScore.Detail.GetAttribute("開課分項類別") == "實習科目")
-                                        get實習學分數 += subjectScore.CreditDec();
-                                    if (subjectScore.Detail.GetAttribute("開課分項類別") == "專業科目")
-                                        get專業學分數 += subjectScore.CreditDec();
-                                    if (subjectScore.Require && subjectScore.Detail.GetAttribute("修課校部訂") == "部訂")
-                                        get部訂必修學分數 += subjectScore.CreditDec();
-                                    if (subjectScore.Require)
-                                        get必修學分數 += subjectScore.CreditDec();
-                                }
-                            }
-                            else
-                            {
-                                subjectScore.Detail.SetAttribute("畢業採計-學分數", "0");
-                                subjectScore.Detail.SetAttribute("畢業採計-說明", "未取得學分");
-                            }
-                            subjectScore.Detail.SetAttribute("畢業採計-說明", (subjectScore.Detail.GetAttribute("畢業採計-說明") == "" ? "" : (subjectScore.Detail.GetAttribute("畢業採計-說明") + "\n")) + "直接使用成績內容");
                             #endregion
                         }
-                        //}
+                        if (subjectScore.Pass)
+                        {
+                            //不計學分不用算
+                            if (subjectScore.Detail.GetAttribute("畢業採計-不計學分") == "是")
+                            {
+                                subjectScore.Detail.SetAttribute("畢業採計-學分數", "0");
+                                subjectScore.Detail.SetAttribute("畢業採計-說明", "不計學分");
+                                continue;
+                            }
+
+                            bool Uncounted = true;
+                            if (filterSameSubject)
+                            {
+                                SubjectName sn = new SubjectName(subjectScore.Subject.Trim(), subjectScore.Level.Trim());
+                                if (PassedSubjects.Contains(sn))
+                                {
+                                    subjectScore.Detail.SetAttribute("畢業採計-學分數", "0");
+                                    subjectScore.Detail.SetAttribute("畢業採計-說明", "同科目級別重複取得學分數");
+                                    Uncounted = false;
+                                }
+                                else
+                                    PassedSubjects.Add(sn);
+                            }
+                            if (Uncounted)
+                            {
+                                decimal credit = 0;
+                                decimal.TryParse(subjectScore.Detail.GetAttribute("畢業採計-學分數"), out credit);
+                                get總學分數 += credit;
+                                if (subjectScore.Detail.GetAttribute("畢業採計-必選修") == "必修" && subjectScore.Detail.GetAttribute("畢業採計-校部訂") == "校訂")
+                                    get校訂必修學分數 += credit;
+                                if (subjectScore.Detail.GetAttribute("畢業採計-必選修") == "選修")
+                                    get選修學分數 += credit;
+                                if (subjectScore.Detail.GetAttribute("畢業採計-分項類別") == "實習科目")
+                                    get實習學分數 += credit;
+                                if (subjectScore.Detail.GetAttribute("畢業採計-分項類別") == "專業科目")
+                                    get專業學分數 += credit;
+                                if (subjectScore.Detail.GetAttribute("畢業採計-必選修") == "必修" && subjectScore.Detail.GetAttribute("畢業採計-校部訂") == "部訂")
+                                    get部訂必修學分數 += credit;
+                                if (subjectScore.Detail.GetAttribute("畢業採計-必選修") == "必修")
+                                    get必修學分數 += credit;
+                            }
+                        }
+                        else
+                        {
+                            subjectScore.Detail.SetAttribute("畢業採計-學分數", "0");
+                            subjectScore.Detail.SetAttribute("畢業採計-說明", "未取得學分");
+                        }
+                        if (useGPlan)
+                            subjectScore.Detail.SetAttribute("畢業採計-說明", (subjectScore.Detail.GetAttribute("畢業採計-說明") == "" ? "" : (subjectScore.Detail.GetAttribute("畢業採計-說明") + "\n")) + "以課程規劃表(" + GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Name + ")為主");
+                        else
+                            subjectScore.Detail.SetAttribute("畢業採計-說明", (subjectScore.Detail.GetAttribute("畢業採計-說明") == "" ? "" : (subjectScore.Detail.GetAttribute("畢業採計-說明") + "\n")) + "直接使用成績內容");
                     }
 
                     if (get已修總學分數 < crule.應修總學分數)
