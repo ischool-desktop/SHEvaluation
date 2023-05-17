@@ -19,6 +19,8 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
             SchoolRequiredCredit = 0;
             PhysicalCredit = 0;
             專業及實習總學分數 = 0;
+            應修總學分數 = 0;
+            應修專業及實習總學分數 = 0;
         }
 
         /// <summary>
@@ -67,5 +69,9 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
         public decimal PhysicalCredit { get; set; }
 
         public decimal 專業及實習總學分數 { get; set; }
+
+        public decimal 應修總學分數 { get; set; }
+
+        public decimal 應修專業及實習總學分數 { get; set; }
     }
 }

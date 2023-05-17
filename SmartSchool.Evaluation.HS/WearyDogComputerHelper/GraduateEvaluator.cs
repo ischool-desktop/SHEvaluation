@@ -127,6 +127,37 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                     }
                     #endregion
                     #region 畢業學分數
+                    //學科應修總學分數
+                    #region 應修總學分數
+                    if (rule.SelectSingleNode("畢業學分數/應修總學分數") != null)
+                    {
+                        string creditstring = rule.SelectSingleNode("畢業學分數/應修總學分數").InnerText.Trim();
+                        if (creditstring != "")
+                        {
+                            //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
+                            if (creditstring.Contains("%"))
+                            {
+                                decimal count = 0;
+                                foreach (GraduationPlan.GraduationPlanSubject gplanSubject in GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Subjects)
+                                {
+                                    decimal credit = 0;
+                                    decimal.TryParse(gplanSubject.Credit, out credit);
+                                    count += credit;
+                                }
+
+                                decimal totalCreditTemp = 0;
+                                decimal.TryParse(creditstring.Replace("%", ""), out totalCreditTemp);
+                                crule.TotalCredit = totalCreditTemp * count / 100m;
+                            }
+                            else
+                            {
+                                decimal totalCreditTemp = 0;
+                                decimal.TryParse(creditstring, out totalCreditTemp);
+                                crule.應修總學分數 = totalCreditTemp;
+                            }
+                        }
+                    }
+                    #endregion
                     //學科累計總學分數
                     #region 總學分數
                     if (rule.SelectSingleNode("畢業學分數/學科累計總學分數") != null)
@@ -324,6 +355,39 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                         }
                     }
                     #endregion
+                    //應修專業及實習總學分數
+                    #region 應修專業及實習總學分數
+                    if (rule.SelectSingleNode("畢業學分數/應修專業及實習總學分數") != null)
+                    {
+                        string creditstring = rule.SelectSingleNode("畢業學分數/應修專業及實習總學分數").InnerText.Trim();
+                        if (creditstring != "")
+                        {
+                            //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
+                            if (creditstring.Contains("%"))
+                            {
+                                decimal count = 0;
+                                foreach (GraduationPlan.GraduationPlanSubject gplanSubject in GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Subjects)
+                                {
+                                    if (gplanSubject.Entry == "實習科目" || gplanSubject.Entry == "專業科目")
+                                    {
+                                        decimal credit = 0;
+                                        decimal.TryParse(gplanSubject.Credit, out credit);
+                                        count += credit;
+                                    }
+                                }
+                                decimal tryParseDecimal = 0;
+                                decimal.TryParse(creditstring.Replace("%", ""), out tryParseDecimal);
+                                crule.專業及實習總學分數 = tryParseDecimal * count / 100m;
+                            }
+                            else
+                            {
+                                decimal tryParseDecimal = 0;
+                                decimal.TryParse(creditstring, out tryParseDecimal);
+                                crule.應修專業及實習總學分數 = tryParseDecimal;
+                            }
+                        }
+                    }
+                    #endregion
                     //專業及實習總學分數
                     #region 專業及實習總學分數
                     if (rule.SelectSingleNode("畢業學分數/專業及實習總學分數") != null)
@@ -517,11 +581,14 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                     #endregion
                     //判斷畢業學分
                     #region 判斷畢業學分
+                    decimal get已修總學分數 = 0;
                     decimal get總學分數 = 0;
                     decimal get必修學分數 = 0;
                     decimal get選修學分數 = 0;
                     decimal get部訂必修學分數 = 0;
                     decimal get校訂必修學分數 = 0;
+                    decimal get已修實習學分數 = 0;
+                    decimal get已修專業學分數 = 0;
                     decimal get實習學分數 = 0;
                     decimal get專業學分數 = 0;
                     SubjectSet PassedSubjects = new SubjectSet();
@@ -564,7 +631,6 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                     else
                                         PassedSubjects.Add(sn);
                                 }
-
                                 if (Uncounted)
                                 {
                                     get總學分數 += credit;
@@ -620,22 +686,21 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                     else
                                         PassedSubjects.Add(sn);
                                 }
-
                                 if (Uncounted)
                                 {
                                     get總學分數 += subjectScore.CreditDec();
                                     if (subjectScore.Require && subjectScore.Detail.GetAttribute("修課校部訂") == "校訂")
-                                         get校訂必修學分數 += subjectScore.CreditDec();
+                                        get校訂必修學分數 += subjectScore.CreditDec();
                                     if (!subjectScore.Require)
-                                         get選修學分數 += subjectScore.CreditDec();
+                                        get選修學分數 += subjectScore.CreditDec();
                                     if (subjectScore.Detail.GetAttribute("開課分項類別") == "實習科目")
-                                         get實習學分數 += subjectScore.CreditDec();
+                                        get實習學分數 += subjectScore.CreditDec();
                                     if (subjectScore.Detail.GetAttribute("開課分項類別") == "專業科目")
-                                         get專業學分數 += subjectScore.CreditDec();
+                                        get專業學分數 += subjectScore.CreditDec();
                                     if (subjectScore.Require && subjectScore.Detail.GetAttribute("修課校部訂") == "部訂")
-                                         get部訂必修學分數 += subjectScore.CreditDec();
+                                        get部訂必修學分數 += subjectScore.CreditDec();
                                     if (subjectScore.Require)
-                                         get必修學分數 += subjectScore.CreditDec();
+                                        get必修學分數 += subjectScore.CreditDec();
                                 }
                             }
                             else
@@ -649,6 +714,18 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                         //}
                     }
 
+                    if (get已修總學分數 < crule.應修總學分數)
+                    {
+                        XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                        unPasselement.InnerText = "應修學分數不足";
+                        evalResult.AppendChild(unPasselement);
+                    }
+                    if ((get已修專業學分數 + get已修實習學分數) < crule.應修專業及實習總學分數)
+                    {
+                        XmlElement unPasselement = doc.CreateElement("UnPassReson");
+                        unPasselement.InnerText = "應修專業及實習總學分數不足";
+                        evalResult.AppendChild(unPasselement);
+                    }
                     if (get總學分數 < crule.TotalCredit)
                     {
                         XmlElement unPasselement = doc.CreateElement("UnPassReson");
@@ -768,7 +845,7 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                         attendCredits += subjectScore.CreditDec();
 
                                         if (subjectScore.Pass)
-                                             passCredits += subjectScore.CreditDec();
+                                            passCredits += subjectScore.CreditDec();
                                         #endregion
                                     }
                                 }
@@ -1436,17 +1513,17 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
 
                                 if (Uncounted)
                                 {
-                                     get總學分數 += subjectScore.CreditDec();
+                                    get總學分數 += subjectScore.CreditDec();
                                     if (subjectScore.Require && subjectScore.Detail.GetAttribute("修課校部訂") == "校訂")
-                                         get校訂必修學分數 += subjectScore.CreditDec();
+                                        get校訂必修學分數 += subjectScore.CreditDec();
                                     if (!subjectScore.Require)
-                                         get選修學分數 += subjectScore.CreditDec();
+                                        get選修學分數 += subjectScore.CreditDec();
                                     if (subjectScore.Detail.GetAttribute("開課分項類別") == "實習科目")
-                                         get實習學分數 += subjectScore.CreditDec();
+                                        get實習學分數 += subjectScore.CreditDec();
                                     if (subjectScore.Require && subjectScore.Detail.GetAttribute("修課校部訂") == "部訂")
-                                         get部訂必修學分數 += subjectScore.CreditDec();
+                                        get部訂必修學分數 += subjectScore.CreditDec();
                                     if (subjectScore.Require)
-                                         get必修學分數 += subjectScore.CreditDec();
+                                        get必修學分數 += subjectScore.CreditDec();
                                 }
                                 #endregion
                             }
@@ -1566,7 +1643,7 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                         attendCredits += subjectScore.CreditDec();
 
                                         if (subjectScore.Pass)
-                                             passCredits += subjectScore.CreditDec();
+                                            passCredits += subjectScore.CreditDec();
                                         #endregion
                                     }
                                 }
