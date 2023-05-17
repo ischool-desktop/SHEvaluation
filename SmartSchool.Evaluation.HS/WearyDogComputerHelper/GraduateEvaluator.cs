@@ -134,12 +134,32 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                             //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
                             if (creditstring.Contains("%"))
                             {
+                                // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
+                                SubjectSet countedSubject = new SubjectSet();
                                 decimal count = 0;
                                 foreach (GraduationPlan.GraduationPlanSubject gplanSubject in GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Subjects)
                                 {
                                     decimal credit = 0;
-                                    decimal.TryParse(gplanSubject.Credit, out credit);
-                                    count += credit;
+                                    SubjectName sn;
+                                    if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
+                                    {
+                                        sn = new SubjectName(gplanSubject.SubjectName.Trim(), gplanSubject.Level.Trim());
+                                        decimal.TryParse(gplanSubject.Credit, out credit);
+                                    }
+                                    else
+                                    {
+                                        // 用成績年級+學期(=>1~6)判斷此分組名稱有沒有計算過、以及計算的學分數
+                                        int tryParseGradeYear = 0, tryParseSemester = 0;
+                                        int.TryParse(gplanSubject.SubjectElement.GetAttribute("GradeYear"), out tryParseGradeYear);
+                                        int.TryParse(gplanSubject.SubjectElement.GetAttribute("Semester"), out tryParseSemester);
+                                        sn = new SubjectName(gplanSubject.SubjectElement.GetAttribute("分組名稱"), "" + (tryParseGradeYear * 2 + tryParseSemester));
+                                        decimal.TryParse(gplanSubject.SubjectElement.GetAttribute("分組修課學分數"), out credit);
+                                    }
+                                    if (!countedSubject.Contains(sn))
+                                    {
+                                        countedSubject.Add(sn);
+                                        count += credit;
+                                    }
                                 }
 
                                 decimal totalCreditTemp = 0;
@@ -165,12 +185,32 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                             //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
                             if (creditstring.Contains("%"))
                             {
+                                // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
+                                SubjectSet countedSubject = new SubjectSet();
                                 decimal count = 0;
                                 foreach (GraduationPlan.GraduationPlanSubject gplanSubject in GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Subjects)
                                 {
                                     decimal credit = 0;
-                                    decimal.TryParse(gplanSubject.Credit, out credit);
-                                    count += credit;
+                                    SubjectName sn;
+                                    if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
+                                    {
+                                        sn = new SubjectName(gplanSubject.SubjectName.Trim(), gplanSubject.Level.Trim());
+                                        decimal.TryParse(gplanSubject.Credit, out credit);
+                                    }
+                                    else
+                                    {
+                                        // 用成績年級+學期(=>1~6)判斷此分組名稱有沒有計算過、以及計算的學分數
+                                        int tryParseGradeYear = 0, tryParseSemester = 0;
+                                        int.TryParse(gplanSubject.SubjectElement.GetAttribute("GradeYear"), out tryParseGradeYear);
+                                        int.TryParse(gplanSubject.SubjectElement.GetAttribute("Semester"), out tryParseSemester);
+                                        sn = new SubjectName(gplanSubject.SubjectElement.GetAttribute("分組名稱"), "" + (tryParseGradeYear * 2 + tryParseSemester));
+                                        decimal.TryParse(gplanSubject.SubjectElement.GetAttribute("分組修課學分數"), out credit);
+                                    }
+                                    if (!countedSubject.Contains(sn))
+                                    {
+                                        countedSubject.Add(sn);
+                                        count += credit;
+                                    }
                                 }
 
                                 decimal totalCreditTemp = 0;
@@ -197,14 +237,34 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                             //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
                             if (creditstring.Contains("%"))
                             {
+                                // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
+                                SubjectSet countedSubject = new SubjectSet();
                                 decimal count = 0;
                                 foreach (GraduationPlan.GraduationPlanSubject gplanSubject in GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Subjects)
                                 {
                                     if (gplanSubject.Required == "必修")
                                     {
                                         decimal credit = 0;
-                                        decimal.TryParse(gplanSubject.Credit, out credit);
-                                        count += credit;
+                                        SubjectName sn;
+                                        if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
+                                        {
+                                            sn = new SubjectName(gplanSubject.SubjectName.Trim(), gplanSubject.Level.Trim());
+                                            decimal.TryParse(gplanSubject.Credit, out credit);
+                                        }
+                                        else
+                                        {
+                                            // 用成績年級+學期(=>1~6)判斷此分組名稱有沒有計算過、以及計算的學分數
+                                            int tryParseGradeYear = 0, tryParseSemester = 0;
+                                            int.TryParse(gplanSubject.SubjectElement.GetAttribute("GradeYear"), out tryParseGradeYear);
+                                            int.TryParse(gplanSubject.SubjectElement.GetAttribute("Semester"), out tryParseSemester);
+                                            sn = new SubjectName(gplanSubject.SubjectElement.GetAttribute("分組名稱"), "" + (tryParseGradeYear * 2 + tryParseSemester));
+                                            decimal.TryParse(gplanSubject.SubjectElement.GetAttribute("分組修課學分數"), out credit);
+                                        }
+                                        if (!countedSubject.Contains(sn))
+                                        {
+                                            countedSubject.Add(sn);
+                                            count += credit;
+                                        }
                                     }
                                 }
                                 decimal requiredCreditTemp = 0;
@@ -230,14 +290,34 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                             //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
                             if (creditstring.Contains("%"))
                             {
+                                // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
+                                SubjectSet countedSubject = new SubjectSet();
                                 decimal count = 0;
                                 foreach (GraduationPlan.GraduationPlanSubject gplanSubject in GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Subjects)
                                 {
                                     if (gplanSubject.Required == "必修" && gplanSubject.RequiredBy == "部訂")
                                     {
                                         decimal credit = 0;
-                                        decimal.TryParse(gplanSubject.Credit, out credit);
-                                        count += credit;
+                                        SubjectName sn;
+                                        if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
+                                        {
+                                            sn = new SubjectName(gplanSubject.SubjectName.Trim(), gplanSubject.Level.Trim());
+                                            decimal.TryParse(gplanSubject.Credit, out credit);
+                                        }
+                                        else
+                                        {
+                                            // 用成績年級+學期(=>1~6)判斷此分組名稱有沒有計算過、以及計算的學分數
+                                            int tryParseGradeYear = 0, tryParseSemester = 0;
+                                            int.TryParse(gplanSubject.SubjectElement.GetAttribute("GradeYear"), out tryParseGradeYear);
+                                            int.TryParse(gplanSubject.SubjectElement.GetAttribute("Semester"), out tryParseSemester);
+                                            sn = new SubjectName(gplanSubject.SubjectElement.GetAttribute("分組名稱"), "" + (tryParseGradeYear * 2 + tryParseSemester));
+                                            decimal.TryParse(gplanSubject.SubjectElement.GetAttribute("分組修課學分數"), out credit);
+                                        }
+                                        if (!countedSubject.Contains(sn))
+                                        {
+                                            countedSubject.Add(sn);
+                                            count += credit;
+                                        }
                                     }
                                 }
                                 decimal eduRequiredCreditTemp = 0;
@@ -263,14 +343,34 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                             //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
                             if (creditstring.Contains("%"))
                             {
+                                // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
+                                SubjectSet countedSubject = new SubjectSet();
                                 decimal count = 0;
                                 foreach (GraduationPlan.GraduationPlanSubject gplanSubject in GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Subjects)
                                 {
                                     if (gplanSubject.Entry == "實習科目")
                                     {
                                         decimal credit = 0;
-                                        decimal.TryParse(gplanSubject.Credit, out credit);
-                                        count += credit;
+                                        SubjectName sn;
+                                        if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
+                                        {
+                                            sn = new SubjectName(gplanSubject.SubjectName.Trim(), gplanSubject.Level.Trim());
+                                            decimal.TryParse(gplanSubject.Credit, out credit);
+                                        }
+                                        else
+                                        {
+                                            // 用成績年級+學期(=>1~6)判斷此分組名稱有沒有計算過、以及計算的學分數
+                                            int tryParseGradeYear = 0, tryParseSemester = 0;
+                                            int.TryParse(gplanSubject.SubjectElement.GetAttribute("GradeYear"), out tryParseGradeYear);
+                                            int.TryParse(gplanSubject.SubjectElement.GetAttribute("Semester"), out tryParseSemester);
+                                            sn = new SubjectName(gplanSubject.SubjectElement.GetAttribute("分組名稱"), "" + (tryParseGradeYear * 2 + tryParseSemester));
+                                            decimal.TryParse(gplanSubject.SubjectElement.GetAttribute("分組修課學分數"), out credit);
+                                        }
+                                        if (!countedSubject.Contains(sn))
+                                        {
+                                            countedSubject.Add(sn);
+                                            count += credit;
+                                        }
                                     }
                                 }
                                 decimal physicalCreditTemp = 0;
@@ -296,14 +396,34 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                             //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
                             if (creditstring.Contains("%"))
                             {
+                                // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
+                                SubjectSet countedSubject = new SubjectSet();
                                 decimal count = 0;
                                 foreach (GraduationPlan.GraduationPlanSubject gplanSubject in GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Subjects)
                                 {
                                     if (gplanSubject.Required == "選修")
                                     {
                                         decimal credit = 0;
-                                        decimal.TryParse(gplanSubject.Credit, out credit);
-                                        count += credit;
+                                        SubjectName sn;
+                                        if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
+                                        {
+                                            sn = new SubjectName(gplanSubject.SubjectName.Trim(), gplanSubject.Level.Trim());
+                                            decimal.TryParse(gplanSubject.Credit, out credit);
+                                        }
+                                        else
+                                        {
+                                            // 用成績年級+學期(=>1~6)判斷此分組名稱有沒有計算過、以及計算的學分數
+                                            int tryParseGradeYear = 0, tryParseSemester = 0;
+                                            int.TryParse(gplanSubject.SubjectElement.GetAttribute("GradeYear"), out tryParseGradeYear);
+                                            int.TryParse(gplanSubject.SubjectElement.GetAttribute("Semester"), out tryParseSemester);
+                                            sn = new SubjectName(gplanSubject.SubjectElement.GetAttribute("分組名稱"), "" + (tryParseGradeYear * 2 + tryParseSemester));
+                                            decimal.TryParse(gplanSubject.SubjectElement.GetAttribute("分組修課學分數"), out credit);
+                                        }
+                                        if (!countedSubject.Contains(sn))
+                                        {
+                                            countedSubject.Add(sn);
+                                            count += credit;
+                                        }
                                     }
                                 }
                                 decimal choicedCreditTemp = 0;
@@ -329,14 +449,34 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                             //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
                             if (creditstring.Contains("%"))
                             {
+                                // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
+                                SubjectSet countedSubject = new SubjectSet();
                                 decimal count = 0;
                                 foreach (GraduationPlan.GraduationPlanSubject gplanSubject in GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Subjects)
                                 {
                                     if (gplanSubject.Required == "必修" && gplanSubject.RequiredBy == "校訂")
                                     {
                                         decimal credit = 0;
-                                        decimal.TryParse(gplanSubject.Credit, out credit);
-                                        count += credit;
+                                        SubjectName sn;
+                                        if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
+                                        {
+                                            sn = new SubjectName(gplanSubject.SubjectName.Trim(), gplanSubject.Level.Trim());
+                                            decimal.TryParse(gplanSubject.Credit, out credit);
+                                        }
+                                        else
+                                        {
+                                            // 用成績年級+學期(=>1~6)判斷此分組名稱有沒有計算過、以及計算的學分數
+                                            int tryParseGradeYear = 0, tryParseSemester = 0;
+                                            int.TryParse(gplanSubject.SubjectElement.GetAttribute("GradeYear"), out tryParseGradeYear);
+                                            int.TryParse(gplanSubject.SubjectElement.GetAttribute("Semester"), out tryParseSemester);
+                                            sn = new SubjectName(gplanSubject.SubjectElement.GetAttribute("分組名稱"), "" + (tryParseGradeYear * 2 + tryParseSemester));
+                                            decimal.TryParse(gplanSubject.SubjectElement.GetAttribute("分組修課學分數"), out credit);
+                                        }
+                                        if (!countedSubject.Contains(sn))
+                                        {
+                                            countedSubject.Add(sn);
+                                            count += credit;
+                                        }
                                     }
                                 }
                                 decimal schoolRequiredCreditTemp = 0;
@@ -362,14 +502,34 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                             //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
                             if (creditstring.Contains("%"))
                             {
+                                // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
+                                SubjectSet countedSubject = new SubjectSet();
                                 decimal count = 0;
                                 foreach (GraduationPlan.GraduationPlanSubject gplanSubject in GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Subjects)
                                 {
                                     if (gplanSubject.Entry == "實習科目" || gplanSubject.Entry == "專業科目")
                                     {
                                         decimal credit = 0;
-                                        decimal.TryParse(gplanSubject.Credit, out credit);
-                                        count += credit;
+                                        SubjectName sn;
+                                        if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
+                                        {
+                                            sn = new SubjectName(gplanSubject.SubjectName.Trim(), gplanSubject.Level.Trim());
+                                            decimal.TryParse(gplanSubject.Credit, out credit);
+                                        }
+                                        else
+                                        {
+                                            // 用成績年級+學期(=>1~6)判斷此分組名稱有沒有計算過、以及計算的學分數
+                                            int tryParseGradeYear = 0, tryParseSemester = 0;
+                                            int.TryParse(gplanSubject.SubjectElement.GetAttribute("GradeYear"), out tryParseGradeYear);
+                                            int.TryParse(gplanSubject.SubjectElement.GetAttribute("Semester"), out tryParseSemester);
+                                            sn = new SubjectName(gplanSubject.SubjectElement.GetAttribute("分組名稱"), "" + (tryParseGradeYear * 2 + tryParseSemester));
+                                            decimal.TryParse(gplanSubject.SubjectElement.GetAttribute("分組修課學分數"), out credit);
+                                        }
+                                        if (!countedSubject.Contains(sn))
+                                        {
+                                            countedSubject.Add(sn);
+                                            count += credit;
+                                        }
                                     }
                                 }
                                 decimal tryParseDecimal = 0;
@@ -395,14 +555,34 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                             //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
                             if (creditstring.Contains("%"))
                             {
+                                // 因應新課程規劃表可填入對開、多選的狀況，相同資料不重複累計
+                                SubjectSet countedSubject = new SubjectSet();
                                 decimal count = 0;
                                 foreach (GraduationPlan.GraduationPlanSubject gplanSubject in GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Subjects)
                                 {
                                     if (gplanSubject.Entry == "實習科目" || gplanSubject.Entry == "專業科目")
                                     {
                                         decimal credit = 0;
-                                        decimal.TryParse(gplanSubject.Credit, out credit);
-                                        count += credit;
+                                        SubjectName sn;
+                                        if (gplanSubject.SubjectElement.GetAttribute("分組名稱") == "")
+                                        {
+                                            sn = new SubjectName(gplanSubject.SubjectName.Trim(), gplanSubject.Level.Trim());
+                                            decimal.TryParse(gplanSubject.Credit, out credit);
+                                        }
+                                        else
+                                        {
+                                            // 用成績年級+學期(=>1~6)判斷此分組名稱有沒有計算過、以及計算的學分數
+                                            int tryParseGradeYear = 0, tryParseSemester = 0;
+                                            int.TryParse(gplanSubject.SubjectElement.GetAttribute("GradeYear"), out tryParseGradeYear);
+                                            int.TryParse(gplanSubject.SubjectElement.GetAttribute("Semester"), out tryParseSemester);
+                                            sn = new SubjectName(gplanSubject.SubjectElement.GetAttribute("分組名稱"), "" + (tryParseGradeYear * 2 + tryParseSemester));
+                                            decimal.TryParse(gplanSubject.SubjectElement.GetAttribute("分組修課學分數"), out credit);
+                                        }
+                                        if (!countedSubject.Contains(sn))
+                                        {
+                                            countedSubject.Add(sn);
+                                            count += credit;
+                                        }
                                     }
                                 }
                                 decimal tryParseDecimal = 0;
@@ -589,8 +769,8 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                     decimal get實習學分數 = 0;
                     decimal get專業學分數 = 0;
 
-                    SubjectSet AttendSubjects = new SubjectSet();
-                    SubjectSet PassedSubjects = new SubjectSet();
+                    SubjectSet attendSubjects = new SubjectSet();
+                    SubjectSet passedSubjects = new SubjectSet();
                     foreach (SemesterSubjectScoreInfo subjectScore in subjectsByStudent)
                     {
                         #region 依據設定設定畢業採計各項屬性
@@ -626,14 +806,14 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                             if (filterSameSubject)
                             {
                                 SubjectName sn = new SubjectName(subjectScore.Subject.Trim(), subjectScore.Level.Trim());
-                                if (AttendSubjects.Contains(sn))
+                                if (attendSubjects.Contains(sn))
                                 {
                                     subjectScore.Detail.SetAttribute("畢業採計-學分數", "0");
                                     subjectScore.Detail.SetAttribute("畢業採計-說明", "同科目級別重複修習");
                                     isCount = false;
                                 }
                                 else
-                                    AttendSubjects.Add(sn);
+                                    attendSubjects.Add(sn);
                             }
                             if (isCount)
                             {
@@ -663,14 +843,14 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                             if (filterSameSubject)
                             {
                                 SubjectName sn = new SubjectName(subjectScore.Subject.Trim(), subjectScore.Level.Trim());
-                                if (PassedSubjects.Contains(sn))
+                                if (passedSubjects.Contains(sn))
                                 {
                                     subjectScore.Detail.SetAttribute("畢業採計-學分數", "0");
                                     subjectScore.Detail.SetAttribute("畢業採計-說明", "同科目級別重複取得學分數");
                                     isCount = false;
                                 }
                                 else
-                                    PassedSubjects.Add(sn);
+                                    passedSubjects.Add(sn);
                             }
                             if (isCount)
                             {
@@ -1094,6 +1274,7 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                     if (rule.SelectSingleNode("畢業學分數/學科累計總學分數") != null)
                     {
                         string creditstring = rule.SelectSingleNode("畢業學分數/學科累計總學分數").InnerText.Trim();
+
                         if (creditstring != "")
                         {
                             //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
