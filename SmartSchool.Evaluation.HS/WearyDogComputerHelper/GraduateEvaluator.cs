@@ -10,9 +10,6 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
 {
     internal class GraduateEvaluator
     {
-        public const string REQUIRED = "必修";
-        public const string PERCENTAGE = "%";
-
         public GraduateEvaluator(AccessHelper accesshelper, List<StudentRecord> students)
         {
             DataSource = accesshelper;
@@ -198,7 +195,7 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                         if (creditstring != "")
                         {
                             //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
-                            if (creditstring.Contains(PERCENTAGE))
+                            if (creditstring.Contains("%"))
                             {
                                 decimal count = 0;
                                 foreach (GraduationPlan.GraduationPlanSubject gplanSubject in GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Subjects)
@@ -211,7 +208,7 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                     }
                                 }
                                 decimal requiredCreditTemp = 0;
-                                decimal.TryParse(creditstring.Replace(PERCENTAGE, ""), out requiredCreditTemp);
+                                decimal.TryParse(creditstring.Replace("%", ""), out requiredCreditTemp);
                                 crule.RequiredCredit = requiredCreditTemp * count / 100m;
                             }
                             else
@@ -546,9 +543,9 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                         {
                             GraduationPlan.GraduationPlanSubject gPlanSubject = GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).GetSubjectInfo(subjectScore.Subject, subjectScore.Level);
 
-                            if (gPlanSubject.Required.Trim() == REQUIRED)
+                            if (gPlanSubject.Required.Trim() == "必修")
                             {
-                                SubjectName sn = new SubjectName(gPlanSubject.SubjectName, gPlanSubject.Level);
+                                SubjectName sn = new SubjectName(gPlanSubject.SubjectName.Trim(), gPlanSubject.Level.Trim());
 
                                 //處理重修問題。
                                 if (!requiredList.Contains(sn))
@@ -562,8 +559,8 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                         foreach (GraduationPlanSubject each in GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Subjects)
                         {
                             //判斷課程規劃科目為必修而且須計學分，亦即必修科目
-                            if (each.Required.Trim() == REQUIRED)
-                                pRequiredSubjects.Add(new SubjectName(each.SubjectName, each.Level));
+                            if (each.Required.Trim() == "必修")
+                                pRequiredSubjects.Add(new SubjectName(each.SubjectName.Trim(), each.Level.Trim()));
                         }
                         foreach (SubjectName each in pRequiredSubjects)
                         {
@@ -591,6 +588,7 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                     decimal get已修專業學分數 = 0;
                     decimal get實習學分數 = 0;
                     decimal get專業學分數 = 0;
+
                     SubjectSet AttendSubjects = new SubjectSet();
                     SubjectSet PassedSubjects = new SubjectSet();
                     foreach (SemesterSubjectScoreInfo subjectScore in subjectsByStudent)
@@ -1131,7 +1129,7 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                         if (creditstring != "")
                         {
                             //若學分數設定為百分比，則掃描學生身上的課程規劃科目取代成實際的學分數
-                            if (creditstring.Contains(PERCENTAGE))
+                            if (creditstring.Contains("%"))
                             {
                                 decimal count = 0;
                                 foreach (GraduationPlan.GraduationPlanSubject gplanSubject in GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Subjects)
@@ -1144,7 +1142,7 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                                     }
                                 }
                                 decimal requiredCreditTemp = 0;
-                                decimal.TryParse(creditstring.Replace(PERCENTAGE, ""), out requiredCreditTemp);
+                                decimal.TryParse(creditstring.Replace("%", ""), out requiredCreditTemp);
                                 crule.RequiredCredit = requiredCreditTemp * count / 100m;
                             }
                             else
@@ -1405,9 +1403,9 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                         {
                             GraduationPlan.GraduationPlanSubject gPlanSubject = GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).GetSubjectInfo(subjectScore.Subject, subjectScore.Level);
 
-                            if (gPlanSubject.Required.Trim() == REQUIRED)
+                            if (gPlanSubject.Required.Trim() == "必修")
                             {
-                                SubjectName sn = new SubjectName(gPlanSubject.SubjectName, gPlanSubject.Level);
+                                SubjectName sn = new SubjectName(gPlanSubject.SubjectName.Trim(), gPlanSubject.Level.Trim());
 
                                 //處理重修問題。
                                 if (!requiredList.Contains(sn))
@@ -1421,8 +1419,8 @@ namespace SmartSchool.Evaluation.WearyDogComputerHelper
                         foreach (GraduationPlanSubject each in GraduationPlan.GraduationPlan.Instance.GetStudentGraduationPlan(student.StudentID).Subjects)
                         {
                             //判斷課程規劃科目為必修而且須計學分，亦即必修科目
-                            if (each.Required.Trim() == REQUIRED)
-                                pRequiredSubjects.Add(new SubjectName(each.SubjectName, each.Level));
+                            if (each.Required.Trim() == "必修")
+                                pRequiredSubjects.Add(new SubjectName(each.SubjectName.Trim(), each.Level.Trim()));
                         }
                         foreach (SubjectName each in pRequiredSubjects)
                         {
